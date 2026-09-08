@@ -14,6 +14,7 @@ Date: 2026-09-08. Scope: the instruction-only `skills/logcove` package and its C
 | Two Project views in one DuckDB connection | Cross-source join returned the expected six rows |
 | Duplicate output column names | Rejected before constructing ambiguous result objects |
 | More than 10,000 result rows or 5 MiB of data | Rejected rather than silently truncated |
+| Wide result near the data size limit | 10,000 rows with 66 columns produce 5,200,001 bytes of compact data and a 5,200,056-byte result file; the actual CLI result validator accepts it |
 | Nonfinite JSON number | Rejected by explicit serialization |
 | Empty query result over known data | Accepted as an empty result array |
 | Empty download manifest | Stopped before inferring a schema or producing replacement results |
@@ -35,6 +36,7 @@ Reviewed the instructions against the current CLI and established product scope:
 - Service actions use the CLI; Session secrets and Vector write keys are not part of analysis prompts.
 - Project IDs are source metadata, and a Chart may refer to multiple Projects.
 - Local-only tasks do not imply uploading data or saving Charts. Existing user authorization is reused for requested saves.
+- Viewing Charts and changing only metadata/style explicitly skip log downloads, SQL execution, and result replacement. New analysis or recalculation can reuse suitable completed manifests.
 - UTC ingestion partitions are distinguished from event-time predicates and late-arrival coverage.
 - Analysis reads completed manifest file lists and handles overlapping downloads without counting the same objects twice.
 - Saved SQL uses full-Project-ID views rather than local paths; spec data stays in the named `result` dataset.

@@ -14,6 +14,8 @@ Use `logcove` for service operations and a locally available DuckDB environment 
 - If unauthenticated, run `logcove login` and let the user approve in their browser. Use `login --no-browser` when a manual link is more useful. Leave the process running while waiting; do not start multiple login attempts or handle Session secrets yourself.
 - For command syntax, authentication recovery, and output handling, read [references/cli.md](references/cli.md). If the CLI is unavailable, explain that it must be installed; do not replace it with handwritten authenticated API calls.
 
+Choose the workflow needed for the request. For viewing an existing Chart or changing only its name, description, tags, or style, go directly to [references/charts.md](references/charts.md): retrieve the Chart and use its stored result as needed. Do not download logs, execute SQL, or replace the result for those tasks. Download and compute when the request requires new analysis or recalculation; reuse suitable completed manifests already available for the selected coverage instead of downloading them again.
+
 ## Choose and download data
 
 1. Discover sources with `logcove projects list`; inspect candidates with `projects get`. Projects are data sources. Their names and descriptions provide context, not a schema. Charts can use multiple Projects, and their Project IDs are metadata tags.

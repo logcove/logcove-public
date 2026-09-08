@@ -73,7 +73,8 @@ result = {
     "data": rows,
 }
 Path("result.json").write_text(
-    json.dumps(result, ensure_ascii=False, allow_nan=False), encoding="utf-8"
+    json.dumps(result, ensure_ascii=False, allow_nan=False, separators=(",", ":")),
+    encoding="utf-8",
 )
 ```
 

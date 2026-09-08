@@ -220,7 +220,10 @@ result = {
     "computed_at": datetime.now(timezone.utc).isoformat(timespec="milliseconds"),
     "data": rows,
 }
-Path("result.json").write_text(json.dumps(result, allow_nan=False))
+Path("result.json").write_text(
+    json.dumps(result, ensure_ascii=False, allow_nan=False, separators=(",", ":")),
+    encoding="utf-8",
+)
 ```
 
 Cast timestamp, decimal, or other non-JSON result columns explicitly in SQL or convert them deliberately before serializing; the example query returns only strings and integer counts.
