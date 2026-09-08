@@ -30,7 +30,7 @@ There is no CLI query engine, `data describe` command, bundled DuckDB, LLM clien
 | `login [--no-browser]` | 1 | Authorize in the user's browser and save a signed Session |
 | `whoami` / `logout` | 1 | Inspect the current identity / revoke this CLI session |
 | `projects list` / `projects get <id>` | 1 | Discover readable active Projects / inspect Project metadata |
-| `data pull <project-id> --from <date> --to <date> --output <dir>` | 2 | Download Parquet for inclusive UTC ingestion dates |
+| `data pull <project-id> --from <date> --to <date> --output <dir> [--concurrency <1-8>]` | 2 | Download Parquet for inclusive UTC ingestion dates |
 | `charts list/get/create/update/delete` | 2 | Manage Chart definitions |
 | `charts result put <id> --file <result.json>` | 2 | Replace the latest result |
 
@@ -54,7 +54,7 @@ Batch 1 acceptance: unit/HTTP contract tests, local API validation, actual brows
 
 ## Batch 2: download and Chart workflow
 
-Download listing and signed URL requests follow the existing pagination contract, including batches of at most 20 signed URLs. Use blocking HTTP and sequential streaming downloads with shared storage connection pools per pull, isolated from authenticated API requests. Write temporary files before making completed downloads visible.
+Download listing and signed URL requests follow the existing pagination contract, including batches of at most 20 signed URLs and a 16 KiB request-body limit. Use blocking HTTP with shared storage connection pools per pull, isolated from authenticated API requests. A bounded window of standard Rust threads streams up to four files concurrently by default (`--concurrency 1-8`); completed downloads free slots for pending files. API requests and credential operations stay on the main thread, including near-expiry refresh and a single re-sign after a storage 403. Finish the current signing batch before requesting the next. On an unrecoverable error, stop scheduling and join started downloads before returning. Write temporary files before making completed downloads visible, and preserve listing order in filenames and the completed manifest.
 
 Create a manifest containing the API environment, Project ID, requested date range, successful local paths, object keys, sizes, ETags, and completion time. Do not persist signed URLs. The agent uses the manifest's files rather than a glob that could include unrelated earlier downloads.
 

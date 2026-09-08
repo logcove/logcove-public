@@ -8,7 +8,7 @@ Date: 2026-09-08. This is local development verification, not a hosted deploymen
 - Browser device authorization with manual-link support, polling/backoff, expiry, and denial handling.
 - Independent CLI Sessions in the OS credential store, renewal, and logout.
 - Readable Project discovery with automatic pagination and Project metadata lookup.
-- Parquet downloads with bounded signing batches, temporary files, and a completed manifest.
+- Parquet downloads with bounded signing batches, shared connection pools, configurable 1-8 concurrency (default 4), temporary files, and a completed manifest.
 - Chart definition CRUD, explicit revision updates, and latest-result upload.
 - Stable JSON results, structured runtime errors, and redacted diagnostics.
 
@@ -19,9 +19,9 @@ Date: 2026-09-08. This is local development verification, not a hosted deploymen
 | macOS ARM64 / Rust 1.90 compilation | Passed |
 | macOS release build | Passed |
 | rustfmt and clippy with warnings denied | Passed |
-| Configuration and executable-level tests | 6 passed |
+| Configuration and executable-level tests | 7 passed |
 | HTTP/authentication/Project contract tests | 21 passed |
-| Download/date/manifest contract tests | 11 passed |
+| Download/date/manifest contract tests | 16 passed |
 | Chart/input/result contract tests | 10 passed |
 | macOS real Keychain persistence | Passed using disposable fake credentials in separate processes, including conditional deletion preserving a newer credential; entries removed afterward |
 | Real browser authorization against a local Logcove API | Passed using `login --no-browser` and the existing browser approval page |
@@ -49,6 +49,10 @@ Credential regression tests verify that an old process receiving a 401 or loggin
 
 After these review fixes, macOS and Linux ARM64 each passed all 48 automated tests; macOS clippy, formatting, release build, and native Keychain smoke also passed. Two real-storage download attempts completed 20 and 40 files respectively, then received HTTP 500 while the API checked R2 object metadata for the next signing batch (`head_files`). The first failure was correlated with an R2 500 in the development Worker log. Both incomplete runs retained completed files without publishing a manifest or leaving partial files. The full 56-file success recorded above predates these fixes; this rerun does not establish a complete real-storage pass for the updated build.
 
+The subsequent concurrent-download implementation passes all 54 automated tests on macOS and Linux ARM64, plus macOS formatting, clippy, and release compilation. Its tests verify overlapping requests at concurrency 3 and 8, filling free slots while an earlier download is still pending, keep-alive connection reuse, deterministic file/manifest order, signing batch boundaries, stopping pending work and joining active downloads after failure, one re-sign per denied file (including a repeated 403), and a signing failure while another download is active. Existing sequential contracts now explicitly use concurrency 1. CLI tests verify the default of 4 and reject invalid concurrency values before credentials or networking are used. Native credential storage is unchanged and its smoke test was not repeated for this change.
+
+The release build then completed a real R2 pull using the default concurrency of 4: all 56 files, 3,284,233 bytes, and a completed manifest in 24.90 seconds. File names and manifest order were verified. DuckDB read the manifest's files and confirmed 100,000 rows, 100,000 unique events, sequence 0-99,999, and no wrong Project/run rows. This is one live smoke-test timing, not a controlled sequential-versus-concurrent benchmark. It establishes a complete real-storage pass for this build despite the earlier transient R2 failures.
+
 ## Batch 2 integration status
 
 The development API uses a real remote R2 binding, with its download-signing target pointing at that same bucket. D1 and API execution remain local. The two existing local Chart result fixtures were preserved in real R2 before switching, then read successfully through the remote binding. `wrangler dev --local` disables remote bindings and must not be used for this setup.
@@ -61,7 +65,7 @@ Browser checks used the installed Playwright library and fresh headless Chrome c
 
 ## Platform boundaries
 
-- Linux ARM64 compilation and all 48 mocked/command tests passed inside the official Rust 1.90 Bookworm container, including download and Chart contracts.
+- Linux ARM64 compilation and all 54 mocked/command tests passed inside the official Rust 1.90 Bookworm container, including concurrent download and Chart contracts.
 - Linux native Secret Service persistence has not been run for this CLI. The container tests intentionally skip the explicit OS-store smoke test; users need a running and unlocked provider.
 - Local Windows GNU cross-check was attempted but could not complete because `x86_64-w64-mingw32-gcc` is unavailable for the TLS dependency build. This is not a passed Windows build or runtime test.
 - CI is configured for native macOS, Linux, and Windows checks, tests, and release compilation. No CI run is claimed before the repository is pushed.

@@ -111,13 +111,13 @@ logcove data pull prj_00000000-0000-4000-8000-000000000001 \
 
 Dates are inclusive UTC **ingestion partitions**, with a maximum range of 93 days. They do not filter event timestamps within a file. Inspect the schema and apply an event-time predicate in DuckDB if your question needs one. An archived or inaccessible Project cannot be downloaded.
 
-The CLI follows all file-list pages, requests signed links in batches of at most 20 keys (also bounded by the API's request size), and streams downloads sequentially using shared connection pools for the pull. Loopback downloads bypass proxies; remote downloads use reqwest's normal proxy support. File bytes come directly from object storage without the user's Session attached. Download progress goes to stderr; stdout contains:
+The CLI follows all file-list pages and requests signed links in batches of at most 20 keys (also bounded by the API's request size). It streams up to four files concurrently by default, using shared connection pools for the pull. Use `--concurrency 1` for sequential downloads or choose any value from 1 to 8. File listing, signing, and Session handling remain on the main thread; only storage downloads run concurrently. The next signing batch starts after the current batch finishes. Loopback downloads bypass proxies; remote downloads use reqwest's normal proxy support. File bytes come directly from object storage without the user's Session attached. Download progress goes to stderr; stdout contains:
 
 ```json
 {"data":{"project_id":"prj_00000000-0000-4000-8000-000000000001","manifest_path":"/your/output/pull-1788825600000000000-1234/manifest.json","file_count":1,"total_bytes":1024}}
 ```
 
-Each invocation creates a new `pull-<time>-<process>` directory inside `--output`. It does not reuse, resume, or overwrite a previous pull. Individual files use numeric local names. The manifest is published only after every file succeeds, including a valid empty manifest when there are no files. Read **only files listed in that manifest**, not a glob spanning old runs.
+Each invocation creates a new `pull-<time>-<process>` directory inside `--output`. It does not reuse, resume, or overwrite a previous pull. Individual files use numeric local names. Filenames and manifest entries follow the file-list order, independent of download completion order. The manifest is published only after every file succeeds, including a valid empty manifest when there are no files. Read **only files listed in that manifest**, not a glob spanning old runs.
 
 ```json
 {
@@ -144,7 +144,7 @@ Each invocation creates a new `pull-<time>-<process>` directory inside `--output
 
 The CLI checks ETags, byte counts, and Parquet header/footer markers. These checks detect incomplete or changed objects; DuckDB remains responsible for decoding their full contents. A changed ETag aborts the pull. Nearly expired links are refreshed, and a storage 403 gets one re-sign attempt. Storage failures do not remove the CLI login. API requests have a 30-second timeout; each download has a 10-second connection timeout and a 300-second total timeout.
 
-If a file fails, its partial file is removed and no completed manifest is published. The error identifies the incomplete run directory; any files already completed there remain for inspection or manual removal. Retry by running the same command, which starts a new run. Listing is not a storage snapshot: concurrent writes, retention, or replacements can affect a pull.
+Once the coordinator observes an unrecoverable download or signing failure, it stops starting new work and waits for all started downloads to finish or reach their existing timeout. A failed file's partial file is removed and no completed manifest is published. The error identifies the incomplete run directory; any files completed there, including other in-flight downloads that succeed during shutdown, remain for inspection or manual removal. Retry by running the same command, which starts a new run. Listing is not a storage snapshot: concurrent writes, retention, or replacements can affect a pull.
 
 ## Calculate locally
 

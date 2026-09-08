@@ -168,3 +168,28 @@ fn help_and_usage_are_available_without_environment_or_credentials() {
         Some(2)
     );
 }
+
+#[test]
+fn download_concurrency_has_a_default_and_rejects_out_of_range_values() {
+    let directory = Directory::new();
+    let help = directory.command(&["data", "pull", "--help"]);
+    assert!(help.status.success());
+    let text = String::from_utf8(help.stdout).unwrap();
+    assert!(text.contains("--concurrency") && text.contains("[default: 4]"));
+    for value in ["0", "9", "-1", "many"] {
+        let result = directory.command(&[
+            "data",
+            "pull",
+            "prj_00000000-0000-4000-8000-000000000001",
+            "--from",
+            "2026-09-08",
+            "--to",
+            "2026-09-08",
+            "--output",
+            "logs",
+            "--concurrency",
+            value,
+        ]);
+        assert_eq!(result.status.code(), Some(2));
+    }
+}

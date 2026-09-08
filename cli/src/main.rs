@@ -70,6 +70,9 @@ enum DataCommand {
         to: String,
         #[arg(long)]
         output: PathBuf,
+        /// Maximum simultaneous file downloads
+        #[arg(long, default_value_t = 4, value_parser = clap::value_parser!(u8).range(1..=8))]
+        concurrency: u8,
     },
 }
 
@@ -157,8 +160,9 @@ fn run(cli: Cli) -> Result<Value> {
                     from,
                     to,
                     output,
+                    concurrency,
                 },
-        } => Ok(json!({"data":api.pull(&project_id, &from, &to, &output)?})),
+        } => Ok(json!({"data":api.pull(&project_id, &from, &to, &output, concurrency)?})),
         Command::Charts { command } => api.chart_command(command),
         Command::Config { .. } => unreachable!(),
     }

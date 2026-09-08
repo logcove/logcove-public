@@ -1,3 +1,5 @@
+#[path = "support/downloads.rs"]
+mod downloads;
 mod support;
 
 use logcove::{client::Api, credentials::CredentialStore, data::validate_dates};
@@ -67,6 +69,209 @@ fn inclusive_utc_dates_check_calendar_and_93_day_boundary() {
 }
 
 #[test]
+fn concurrent_downloads_fill_free_slots_reuse_connections_and_keep_manifest_order() {
+    let storage = downloads::Storage::start(|index, _, monitor| {
+        if index < 3 {
+            monitor.wait_for(|s| s.started.len() >= 3);
+        }
+        if index == 0 {
+            monitor.wait_for(|s| s.finished.contains(&3));
+        }
+        (200, format!("PAR1{index:09}PAR1"))
+    });
+    let server = Server::start(vec![
+        list((0..7).map(object).collect(), None, None),
+        links(&(0..7).collect::<Vec<_>>(), &storage.origin),
+    ]);
+    let mut api = Api::new(server.origin.clone(), MemoryStore::with_token(TOKEN)).unwrap();
+    let output = Directory::default();
+    let report = api
+        .pull(PROJECT, "2026-09-08", "2026-09-08", &output.0, 3)
+        .unwrap();
+    let manifest: Value =
+        serde_json::from_slice(&std::fs::read(&report.manifest_path).unwrap()).unwrap();
+    for (index, file) in manifest["files"].as_array().unwrap().iter().enumerate() {
+        assert_eq!(file["key"], key(index));
+        assert_eq!(file["path"], format!("{index:06}.parquet"));
+        let path = report
+            .manifest_path
+            .parent()
+            .unwrap()
+            .join(file["path"].as_str().unwrap());
+        assert_eq!(
+            std::fs::read_to_string(path).unwrap(),
+            format!("PAR1{index:09}PAR1")
+        );
+    }
+    assert_eq!(report.file_count, 7);
+    assert_eq!(report.total_bytes, 7 * BYTES.len() as u64);
+    let stats = storage.finish();
+    assert_eq!(stats.peak, 3);
+    assert!(
+        stats.connections <= 3,
+        "Completed requests should reuse pooled connections"
+    );
+    assert_eq!(stats.started.len(), 7);
+    assert!(
+        stats.finished.iter().position(|i| *i == 3) < stats.finished.iter().position(|i| *i == 0)
+    );
+    server.finish();
+}
+
+#[test]
+fn concurrent_failure_joins_active_downloads_and_leaves_no_manifest() {
+    let storage = downloads::Storage::start(|index, _, monitor| {
+        monitor.wait_for(|s| s.started.len() >= 3);
+        if index == 0 {
+            return (200, "this-is-not-par1!".into());
+        }
+        monitor.wait_for(|s| s.finished.contains(&0));
+        std::thread::sleep(std::time::Duration::from_millis(100));
+        (200, BYTES.into())
+    });
+    let server = Server::start(vec![
+        list((0..6).map(object).collect(), None, None),
+        links(&(0..6).collect::<Vec<_>>(), &storage.origin),
+    ]);
+    let mut api = Api::new(server.origin.clone(), MemoryStore::with_token(TOKEN)).unwrap();
+    let output = Directory::default();
+    let error = api
+        .pull(PROJECT, "2026-09-08", "2026-09-08", &output.0, 3)
+        .err()
+        .unwrap();
+    assert_eq!(error.code, "INVALID_PARQUET");
+    assert!(!error.message.contains("private-signature"));
+    let stats = storage.monitor.snapshot();
+    assert_eq!(stats.active, 0);
+    assert_eq!(stats.finished.len(), 3);
+    let run = std::fs::read_dir(&output.0)
+        .unwrap()
+        .next()
+        .unwrap()
+        .unwrap()
+        .path();
+    let mut names: Vec<_> = std::fs::read_dir(run)
+        .unwrap()
+        .map(|p| p.unwrap().file_name())
+        .collect();
+    names.sort();
+    assert_eq!(names, ["000001.parquet", "000002.parquet"]);
+    let stats = storage.finish();
+    assert_eq!(stats.started.len(), 3);
+    server.finish();
+}
+
+#[test]
+fn eight_downloads_can_overlap_across_bounded_signing_batches() {
+    let storage = downloads::Storage::start(|index, _, monitor| {
+        if index < 8 {
+            monitor.wait_for(|s| s.started.len() >= 8);
+        }
+        (200, BYTES.into())
+    });
+    let server = Server::start(vec![
+        list((0..22).map(object).collect(), None, None),
+        links(&(0..20).collect::<Vec<_>>(), &storage.origin),
+        links(&[20, 21], &storage.origin),
+    ]);
+    let mut api = Api::new(server.origin.clone(), MemoryStore::with_token(TOKEN)).unwrap();
+    let report = api
+        .pull(
+            PROJECT,
+            "2026-09-08",
+            "2026-09-08",
+            &Directory::default().0,
+            8,
+        )
+        .unwrap();
+    assert_eq!(report.file_count, 22);
+    let stats = storage.finish();
+    assert_eq!(stats.peak, 8);
+    assert_eq!(stats.started.len(), 22);
+    server.finish();
+}
+
+#[test]
+fn concurrent_denied_download_is_resigned_only_once() {
+    for always_denied in [false, true] {
+        let storage = downloads::Storage::start(move |index, attempt, monitor| {
+            monitor.wait_for(|s| s.started.len() >= 3);
+            if index == 0 && (attempt == 1 || always_denied) {
+                (403, String::new())
+            } else {
+                (200, BYTES.into())
+            }
+        });
+        let server = Server::start(vec![
+            list((0..3).map(object).collect(), None, None),
+            links(&[0, 1, 2], &storage.origin),
+            links(&[0], &storage.origin),
+        ]);
+        let store = MemoryStore::with_token(TOKEN);
+        let mut api = Api::new(server.origin.clone(), store.clone()).unwrap();
+        let output = Directory::default();
+        let result = api.pull(PROJECT, "2026-09-08", "2026-09-08", &output.0, 3);
+        if always_denied {
+            assert_eq!(result.err().unwrap().code, "DOWNLOAD_DENIED");
+            let run = std::fs::read_dir(&output.0)
+                .unwrap()
+                .next()
+                .unwrap()
+                .unwrap()
+                .path();
+            assert!(!run.join("manifest.json").exists());
+        } else {
+            assert_eq!(result.unwrap().file_count, 3);
+        }
+        assert!(store.read().unwrap().is_some());
+        let stats = storage.finish();
+        assert_eq!(stats.started.iter().filter(|i| **i == 0).count(), 2);
+        assert!(stats.peak <= 3);
+        server.finish();
+    }
+}
+
+#[test]
+fn signing_failure_during_concurrent_download_waits_for_started_file() {
+    let storage = downloads::Storage::start(|_, _, _| (200, BYTES.into()));
+    let mut signed = links(&[0, 1], &storage.origin);
+    let mut body: Value = serde_json::from_str(&signed.response).unwrap();
+    body["data"][1]["expires_at"] = json!("2000-01-01T00:00:00Z");
+    signed.response = body.to_string();
+    let server = Server::start(vec![
+        list(vec![object(0), object(1)], None, None),
+        signed,
+        Step::json(
+            "POST",
+            &format!("/data/v1/projects/{PROJECT}/download-urls"),
+            Some(TOKEN),
+            500,
+            json!({}),
+        )
+        .body(json!({"keys":[key(1)]})),
+    ]);
+    let mut api = Api::new(server.origin.clone(), MemoryStore::with_token(TOKEN)).unwrap();
+    let output = Directory::default();
+    let error = api
+        .pull(PROJECT, "2026-09-08", "2026-09-08", &output.0, 3)
+        .err()
+        .unwrap();
+    assert_eq!(error.code, "SERVER_ERROR");
+    let run = std::fs::read_dir(&output.0)
+        .unwrap()
+        .next()
+        .unwrap()
+        .unwrap()
+        .path();
+    assert!(run.join("000000.parquet").exists());
+    assert!(!run.join("manifest.json").exists());
+    let stats = storage.finish();
+    assert_eq!(stats.started, vec![0]);
+    assert_eq!(stats.finished, vec![0]);
+    server.finish();
+}
+
+#[test]
 fn paginated_downloads_use_separate_auth_free_client_and_publish_portable_manifest() {
     let storage = Server::start(vec![download(0), download(1)]);
     let api_server = Server::start(vec![
@@ -79,7 +284,7 @@ fn paginated_downloads_use_separate_auth_free_client_and_publish_portable_manife
     let output = Directory::default();
     output.write("old.parquet", "old-data-not-in-this-pull");
     let report = api
-        .pull(PROJECT, "2026-09-08", "2026-09-08", &output.0)
+        .pull(PROJECT, "2026-09-08", "2026-09-08", &output.0, 1)
         .unwrap();
     assert_eq!(report.file_count, 2);
     assert_eq!(report.total_bytes, 2 * BYTES.len() as u64);
@@ -150,7 +355,13 @@ fn downloads_reuse_one_keep_alive_connection_without_api_credentials() {
     ]);
     let mut api = Api::new(server.origin.clone(), MemoryStore::with_token(TOKEN)).unwrap();
     let result = api
-        .pull(PROJECT, "2026-09-08", "2026-09-08", &Directory::default().0)
+        .pull(
+            PROJECT,
+            "2026-09-08",
+            "2026-09-08",
+            &Directory::default().0,
+            1,
+        )
         .unwrap();
     assert_eq!(result.file_count, 3);
     handle.join().unwrap();
@@ -168,9 +379,15 @@ fn signing_is_batched_at_twenty_keys() {
     ]);
     let mut api = Api::new(api_server.origin.clone(), MemoryStore::with_token(TOKEN)).unwrap();
     assert_eq!(
-        api.pull(PROJECT, "2026-09-08", "2026-09-08", &Directory::default().0)
-            .unwrap()
-            .file_count,
+        api.pull(
+            PROJECT,
+            "2026-09-08",
+            "2026-09-08",
+            &Directory::default().0,
+            1
+        )
+        .unwrap()
+        .file_count,
         21
     );
     storage.finish();
@@ -218,9 +435,15 @@ fn long_object_keys_split_signing_requests_at_the_body_limit() {
     let server = Server::start(steps);
     let mut api = Api::new(server.origin.clone(), MemoryStore::with_token(TOKEN)).unwrap();
     assert_eq!(
-        api.pull(PROJECT, "2026-09-08", "2026-09-08", &Directory::default().0)
-            .unwrap()
-            .file_count,
+        api.pull(
+            PROJECT,
+            "2026-09-08",
+            "2026-09-08",
+            &Directory::default().0,
+            1
+        )
+        .unwrap()
+        .file_count,
         20
     );
     storage.finish();
@@ -248,9 +471,15 @@ fn expired_link_is_resigned_before_any_storage_request() {
     ]);
     let mut api = Api::new(server.origin.clone(), MemoryStore::with_token(TOKEN)).unwrap();
     assert_eq!(
-        api.pull(PROJECT, "2026-09-08", "2026-09-08", &Directory::default().0)
-            .unwrap()
-            .file_count,
+        api.pull(
+            PROJECT,
+            "2026-09-08",
+            "2026-09-08",
+            &Directory::default().0,
+            1
+        )
+        .unwrap()
+        .file_count,
         1
     );
     storage.finish();
@@ -263,7 +492,7 @@ fn empty_result_creates_empty_manifest_without_signing_requests() {
     let mut api = Api::new(server.origin.clone(), MemoryStore::with_token(TOKEN)).unwrap();
     let output = Directory::default();
     let result = api
-        .pull(PROJECT, "2026-09-08", "2026-09-08", &output.0)
+        .pull(PROJECT, "2026-09-08", "2026-09-08", &output.0, 1)
         .unwrap();
     assert_eq!(result.file_count, 0);
     assert_eq!(result.total_bytes, 0);
@@ -291,9 +520,15 @@ fn expired_download_access_is_refreshed_once_without_losing_session() {
     let store = MemoryStore::with_token(TOKEN);
     let mut api = Api::new(server.origin.clone(), store.clone()).unwrap();
     assert_eq!(
-        api.pull(PROJECT, "2026-09-08", "2026-09-08", &Directory::default().0)
-            .unwrap()
-            .file_count,
+        api.pull(
+            PROJECT,
+            "2026-09-08",
+            "2026-09-08",
+            &Directory::default().0,
+            1
+        )
+        .unwrap()
+        .file_count,
         1
     );
     assert!(store.read().unwrap().is_some());
@@ -313,7 +548,7 @@ fn failed_second_file_does_not_publish_manifest_or_leave_partial_file() {
     let mut api = Api::new(server.origin.clone(), MemoryStore::with_token(TOKEN)).unwrap();
     let output = Directory::default();
     let error = api
-        .pull(PROJECT, "2026-09-08", "2026-09-08", &output.0)
+        .pull(PROJECT, "2026-09-08", "2026-09-08", &output.0, 1)
         .err()
         .unwrap();
     assert_eq!(error.code, "INVALID_PARQUET");
@@ -352,7 +587,13 @@ fn object_change_and_redirect_are_not_accepted_as_downloads() {
         let store = MemoryStore::with_token(TOKEN);
         let mut api = Api::new(server.origin.clone(), store.clone()).unwrap();
         let error = api
-            .pull(PROJECT, "2026-09-08", "2026-09-08", &Directory::default().0)
+            .pull(
+                PROJECT,
+                "2026-09-08",
+                "2026-09-08",
+                &Directory::default().0,
+                1,
+            )
             .err()
             .unwrap();
         assert_eq!(
@@ -377,10 +618,16 @@ fn foreign_project_listing_and_duplicate_cursor_are_rejected() {
     let server = Server::start(vec![list(vec![other], None, None)]);
     let mut api = Api::new(server.origin.clone(), MemoryStore::with_token(TOKEN)).unwrap();
     assert_eq!(
-        api.pull(PROJECT, "2026-09-08", "2026-09-08", &Directory::default().0)
-            .err()
-            .unwrap()
-            .code,
+        api.pull(
+            PROJECT,
+            "2026-09-08",
+            "2026-09-08",
+            &Directory::default().0,
+            1
+        )
+        .err()
+        .unwrap()
+        .code,
         "INVALID_RESPONSE"
     );
     server.finish();
@@ -390,10 +637,16 @@ fn foreign_project_listing_and_duplicate_cursor_are_rejected() {
     ]);
     let mut api = Api::new(server.origin.clone(), MemoryStore::with_token(TOKEN)).unwrap();
     assert_eq!(
-        api.pull(PROJECT, "2026-09-08", "2026-09-08", &Directory::default().0)
-            .err()
-            .unwrap()
-            .code,
+        api.pull(
+            PROJECT,
+            "2026-09-08",
+            "2026-09-08",
+            &Directory::default().0,
+            1
+        )
+        .err()
+        .unwrap()
+        .code,
         "INVALID_PAGINATION"
     );
     server.finish();

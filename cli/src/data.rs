@@ -10,10 +10,12 @@ use reqwest::{blocking::Client, redirect::Policy, Method, Url};
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 use std::{
-    collections::{HashMap, HashSet},
+    collections::{HashMap, HashSet, VecDeque},
     fs::{self, File, OpenOptions},
     io::{Read, Seek, SeekFrom, Write},
     path::{Path, PathBuf},
+    sync::mpsc,
+    thread,
     time::{Duration, SystemTime, UNIX_EPOCH},
 };
 use time::{
@@ -106,7 +108,14 @@ impl<S: CredentialStore> Api<S> {
         from: &str,
         to: &str,
         output: &Path,
+        concurrency: u8,
     ) -> Result<PullSummary> {
+        if !(1..=8).contains(&concurrency) {
+            return Err(Error::new(
+                "INVALID_INPUT",
+                "Concurrency must be between 1 and 8.",
+            ));
+        }
         if !valid_project_id(project) {
             return Err(Error::new(
                 "INVALID_PROJECT_ID",
@@ -134,7 +143,7 @@ impl<S: CredentialStore> Api<S> {
         builder
             .create(&directory)
             .map_err(|_| file_error("Could not create a unique pull directory."))?;
-        let result = self.pull_into(project, from, to, &objects, &directory);
+        let result = self.pull_into(project, (from, to), &objects, &directory, concurrency);
         result.map_err(|mut error| {
             error.message.push_str(&format!(
                 " Incomplete pull: {}. No completed manifest was published.",
@@ -225,10 +234,10 @@ impl<S: CredentialStore> Api<S> {
     fn pull_into(
         &mut self,
         project: &str,
-        from: &str,
-        to: &str,
+        (from, to): (&str, &str),
         objects: &[LogFile],
         directory: &Path,
+        concurrency: u8,
     ) -> Result<PullSummary> {
         let clients = DownloadClients::new()?;
         let mut manifest = Manifest {
@@ -255,53 +264,89 @@ impl<S: CredentialStore> Api<S> {
                 return Err(Error::invalid_response());
             }
             let mut links = self.download_links(project, &keys)?;
-            for file in &objects[offset..offset + keys.len()] {
-                let mut link = links
-                    .remove(&file.key)
-                    .ok_or_else(Error::invalid_response)?;
-                let expires = OffsetDateTime::parse(&link.expires_at, &Rfc3339)
-                    .map_err(|_| Error::invalid_response())?;
-                if expires <= OffsetDateTime::now_utc() + time::Duration::seconds(30) {
-                    link = self
-                        .download_links(project, &[&file.key])?
-                        .remove(&file.key)
-                        .ok_or_else(Error::invalid_response)?;
+            let batch = &objects[offset..offset + keys.len()];
+            let local_api = config::is_loopback(&self.origin);
+            // Keep API/keyring operations on this thread; workers only fetch storage bytes.
+            thread::scope(|scope| -> Result<()> {
+                let (sender, receiver) = mpsc::channel();
+                let mut pending: VecDeque<_> = (0..batch.len()).map(|i| (i, false)).collect();
+                let mut active = 0;
+                let mut completed = 0;
+                while !pending.is_empty() || active > 0 {
+                    while active < concurrency && !pending.is_empty() {
+                        let (index, retry) = pending.pop_front().unwrap();
+                        let file = &batch[index];
+                        let mut link = links
+                            .remove(&file.key)
+                            .ok_or_else(Error::invalid_response)?;
+                        let expires = OffsetDateTime::parse(&link.expires_at, &Rfc3339)
+                            .map_err(|_| Error::invalid_response())?;
+                        if retry
+                            || expires <= OffsetDateTime::now_utc() + time::Duration::seconds(30)
+                        {
+                            link = self
+                                .download_links(project, &[&file.key])?
+                                .remove(&file.key)
+                                .ok_or_else(Error::invalid_response)?;
+                        }
+                        let path = directory.join(format!("{:06}.parquet", offset + index));
+                        let url = link.url.clone();
+                        links.insert(file.key.clone(), link);
+                        let sender = sender.clone();
+                        let clients = &clients;
+                        thread::Builder::new()
+                            .spawn_scoped(scope, move || {
+                                // Report even a worker panic so the coordinator cannot wait forever.
+                                let result =
+                                    std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+                                        download(clients, &url, file, &path, local_api)
+                                    }))
+                                    .unwrap_or_else(|_| {
+                                        Err(Error::new(
+                                            "DOWNLOAD_FAILED",
+                                            "The download worker panicked.",
+                                        ))
+                                    });
+                                let _ = sender.send((index, retry, result));
+                            })
+                            .map_err(|_| {
+                                Error::new("DOWNLOAD_FAILED", "Could not start a download worker.")
+                            })?;
+                        active += 1;
+                    }
+                    let first = receiver.recv().map_err(|_| {
+                        Error::new(
+                            "DOWNLOAD_FAILED",
+                            "The download worker stopped unexpectedly.",
+                        )
+                    })?;
+                    // Observe queued failures before filling newly available slots.
+                    for (index, retry, result) in std::iter::once(first).chain(receiver.try_iter())
+                    {
+                        active -= 1;
+                        if !retry && result.as_ref().is_err_and(|e| e.code == "DOWNLOAD_DENIED") {
+                            pending.push_front((index, true));
+                        } else {
+                            result?;
+                            completed += 1;
+                            eprintln!(
+                                "Downloaded {} / {} files",
+                                offset + completed,
+                                objects.len()
+                            );
+                        }
+                    }
                 }
-                let name = format!("{:06}.parquet", manifest.files.len());
-                let path = directory.join(&name);
-                let mut result = download(
-                    &clients,
-                    &link.url,
-                    file,
-                    &path,
-                    config::is_loopback(&self.origin),
-                );
-                if result.as_ref().is_err_and(|e| e.code == "DOWNLOAD_DENIED") {
-                    let fresh = self
-                        .download_links(project, &[&file.key])?
-                        .remove(&file.key)
-                        .ok_or_else(Error::invalid_response)?;
-                    result = download(
-                        &clients,
-                        &fresh.url,
-                        file,
-                        &path,
-                        config::is_loopback(&self.origin),
-                    );
-                }
-                result?;
+                Ok(())
+            })?;
+            for (index, file) in batch.iter().enumerate() {
                 total_bytes = total_bytes
                     .checked_add(file.size)
                     .ok_or_else(Error::invalid_response)?;
                 manifest.files.push(ManifestFile {
                     object: file.clone(),
-                    path: name,
+                    path: format!("{:06}.parquet", offset + index),
                 });
-                eprintln!(
-                    "Downloaded {} / {} files",
-                    manifest.files.len(),
-                    objects.len()
-                );
             }
             offset += keys.len();
         }
