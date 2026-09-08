@@ -1,0 +1,8 @@
+/target/
+/cli/target/
+/experiments/
+.DS_Store
+.env
+.env.*
+*.parquet
+__pycache__/
