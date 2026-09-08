@@ -6,7 +6,7 @@ This public repository contains the Rust CLI, agent Skills, and user documentati
 
 ## Development status
 
-The implementation plan is in [docs/implementation-plan.md](docs/implementation-plan.md). The CLI implements configuration, browser authorization, persistent sessions, Project discovery, Parquet downloads, and Chart operations. See [validation results](docs/validation.md) for actual platform and API checks. The analysis Skill and binary distribution follow in batch 3.
+The implementation plan is in [docs/implementation-plan.md](docs/implementation-plan.md). The CLI implements configuration, browser authorization, persistent sessions, Project discovery, concurrent Parquet downloads, and Chart operations. The shared analysis Skill is available from this checkout for Codex and Claude Code. See [CLI validation](docs/validation.md) and [Skill validation](docs/skill-validation.md) for actual verification boundaries. Automated distribution and prebuilt binary releases remain pending.
 
 The CLI does not embed DuckDB or call an LLM. Agents use DuckDB directly for local computation and use the CLI for Logcove operations.
 
@@ -23,6 +23,12 @@ cargo build --locked
 After choosing a Project, use `logcove data pull` to download its Parquet files and a manifest. Analyze the manifest's files with DuckDB, then save SQL, a Vega-Lite specification, and aggregate results with `logcove charts create`. See the [download and Chart walkthrough](docs/cli.md#download-parquet).
 
 The localhost example requires a running Logcove development API and web application. For a hosted deployment, configure its actual HTTPS API origin. See [CLI usage](docs/cli.md) for installation, environment selection, authentication, and credential-store requirements.
+
+## Use with a coding agent
+
+Install the whole [`skills/logcove`](skills/logcove/SKILL.md) folder for your agent using [these instructions](docs/skills.md), then ask it to analyze a selected source and period. For example: `Use $logcove to analyze requests by service for the last complete UTC day and save a chart.` In Claude Code, invoke `/logcove`.
+
+The Skill guides discovery, manifest-based local DuckDB analysis, Vega-Lite generation, and optional Chart persistence. It does not ask the model to manage Session tokens or use Vector write keys for reads.
 
 ## License
 

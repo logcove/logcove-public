@@ -15,7 +15,7 @@ To install a local build in Cargo's executable directory:
 cargo install --path cli --locked
 ```
 
-Prebuilt releases and the analysis Skill are not published yet. The CLI implements authentication, Project discovery, Parquet downloads, and Chart operations. These commands do not require DuckDB; install DuckDB separately for local analysis.
+Prebuilt releases are not published yet. The CLI implements authentication, Project discovery, Parquet downloads, and Chart operations; the [analysis Skill](skills.md) is available from this checkout. These commands do not require DuckDB; install DuckDB separately for local analysis.
 
 ## Select an API environment
 

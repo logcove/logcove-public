@@ -66,13 +66,15 @@ Chart creation may include its initial computed result. Definition updates respe
 
 Batch 2 acceptance: real authorized Parquet downloads, known DuckDB aggregates, Chart creation/update/result replacement, and successful web rendering. The test API's R2 listing binding and download-signing target must point to the same real storage; locally emulated R2 cannot validate real downloads.
 
-## Batch 3: Skill and distribution
+## Batch 3: Skill, followed by distribution
 
 Create one `skills/logcove/SKILL.md` with the core workflow. Put detailed CLI usage, DuckDB examples, and Vega-Lite conventions in `references/` for on-demand reading. Maintain a common core for Codex and Claude Code with separate installation instructions.
 
 The Skill checks identity, discovers sources, scopes the question and time range, downloads files, inspects schemas/samples, computes and checks results, and creates a Chart when the user wants one saved. Service interactions use the CLI; prompts do not ask agents to assemble authentication headers or handle Session secrets.
 
-Distribute prebuilt binaries via GitHub Releases and include checksums, license, and matching CLI/Skill documentation. Start development on macOS while checking macOS, Linux, and Windows builds. Record actual supported release targets and tested runtimes. A stable HTTPS test deployment is required before an external test release; local development is not blocked by that deployment.
+Complete and commit the Skill before changing CLI/Skill CI/CD. This first step is instruction-only and adds no runtime dependencies or CLI commands. Validate examples and the local workflow, and keep source installation distinct from released distribution.
+
+In the following step, distribute prebuilt binaries via GitHub Releases and include checksums, license, and matching CLI/Skill documentation. Start development on macOS while checking macOS, Linux, and Windows builds. Record actual supported release targets and tested runtimes. A stable HTTPS test deployment is required before an external test release; local development is not blocked by that deployment.
 
 ## Dependencies and maintenance
 
@@ -92,4 +94,4 @@ Commit the application lockfile. Main maintenance costs are dependency/security 
 
 - Batch 1 is implemented, with macOS tests, real browser authorization, native credential persistence, and local Project API verification completed. Linux and Windows verification boundaries are recorded in [validation.md](validation.md).
 - Batch 2 download/manifest and Chart commands are implemented. macOS and Linux ARM64 automated tests pass. Real R2 downloads, DuckDB verification of 100,000 synthetic events, Chart result operations, and rendering in the existing web UI have passed; see [validation.md](validation.md).
-- Batch 3 Skill/distribution and hosted test deployment remain pending. No CLI binary release has been published.
+- Batch 3 Skill authoring is implemented in `skills/logcove`, with source installation instructions in [skills.md](skills.md) and actual verification in [skill-validation.md](skill-validation.md). CLI/Skill CI/CD and hosted test deployment follow after the Skill commit. No CLI binary release has been published.
