@@ -134,12 +134,14 @@ impl<S: CredentialStore> Api<S> {
             .map_err(|_| file_error("Invalid system clock."))?
             .as_nanos();
         let directory = output.join(format!("pull-{run}-{}", std::process::id()));
-        let mut builder = fs::DirBuilder::new();
+        let builder = fs::DirBuilder::new();
         #[cfg(unix)]
-        {
+        let builder = {
             use std::os::unix::fs::DirBuilderExt;
+            let mut builder = builder;
             builder.mode(0o700);
-        }
+            builder
+        };
         builder
             .create(&directory)
             .map_err(|_| file_error("Could not create a unique pull directory."))?;
