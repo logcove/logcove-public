@@ -4,7 +4,7 @@ The instruction-only Skill is in [`skills/logcove`](../skills/logcove/SKILL.md).
 
 ## Prerequisites
 
-- Install the CLI from this checkout with `cargo install --path cli --locked`, and ensure `logcove` is on the agent's PATH. Prebuilt release installation is a later step.
+- Install the CLI from this checkout with `cargo install --path cli --locked`, and ensure `logcove` is on the agent's PATH. Prebuilt archive automation is implemented, but no release is published by this work; see [release status](releases.md).
 - Configure your actual API origin and complete `logcove login`. See [CLI usage](cli.md) for browser authorization and OS credential-store requirements.
 - Provide a local DuckDB environment. Either the DuckDB CLI or Python package can be used; the Skill's examples use Python's `duckdb` package. A renderer is optional for local preview but necessary before claiming visual verification or image export.
 
@@ -42,6 +42,12 @@ Copy-Item -Path skills/logcove -Destination "$env:USERPROFILE\.agents\skills" -R
 For development, Codex also supports symlinked Skill folders. Otherwise refresh the installed copy after changing the source, preserving any deliberate local customizations. Verify which copy the host loads if you have installed the same Skill in more than one scope. Start a fresh session if it is not visible.
 
 These are local installation instructions, not a plugin-marketplace release or automated updater. Host discovery paths were checked against the [official Codex documentation](https://developers.openai.com/codex/skills/) and [Claude Code documentation](https://code.claude.com/docs/en/skills) on 2026-09-08. Actual verification boundaries are in [Skill validation](skill-validation.md).
+
+## Distribution archives
+
+The build workflow packages this same Skill with the CLI's version. A CLI archive includes `skills/logcove/`, so the checkout copy instructions above also work from its extracted root. The separate `logcove-skills-v<version>.zip` extracts directly to `logcove/`; copy that entire folder into the appropriate host directory from the table above. Do not copy only SKILL.md. The separate ZIP includes a VERSION file and LICENSE.
+
+Check the release's SHA256SUMS before extracting. Release publication and automated installation/update are distinct: the tag-triggered release workflow is implemented, but installation/update scripts and fresh-environment verification remain the next batch. See [release procedures](releases.md) for the actual publication status.
 
 ## Try a task
 

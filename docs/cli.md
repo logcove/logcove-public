@@ -34,6 +34,8 @@ logcove config set-api-url http://localhost:8787
 
 No default production endpoint is assumed. Precedence is `--api-url`, `LOGCOVE_API_URL`, then the saved origin. A flag or environment override applies to that invocation and does not overwrite the saved configuration.
 
+The agreed future production API is `https://api.logcove.com`, with the web application at `https://app.logcove.com`. After deployment and verification, a future release will use that API as a built-in fallback after the three overrides above. The test API is planned at `https://api-test.logcove.com`. These addresses are deployment plans, not currently verified service endpoints; the current CLI has no built-in default. Upgrades will preserve an explicitly saved local, test, or self-hosted origin.
+
 ```sh
 logcove --api-url http://localhost:8787 whoami
 ```

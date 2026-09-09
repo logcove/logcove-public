@@ -1,5 +1,6 @@
 /target/
 /cli/target/
+/dist/
 /experiments/
 .DS_Store
 .env

@@ -6,7 +6,7 @@ This public repository contains the Rust CLI, agent Skills, and user documentati
 
 ## Development status
 
-The implementation plan is in [docs/implementation-plan.md](docs/implementation-plan.md). The CLI implements configuration, browser authorization, persistent sessions, Project discovery, concurrent Parquet downloads, and Chart operations. The shared analysis Skill is available from this checkout for Codex and Claude Code. See [CLI validation](docs/validation.md) and [Skill validation](docs/skill-validation.md) for actual verification boundaries. Automated distribution and prebuilt binary releases remain pending.
+The implementation plan is in [docs/implementation-plan.md](docs/implementation-plan.md). The CLI implements configuration, browser authorization, persistent sessions, Project discovery, concurrent Parquet downloads, and Chart operations. The shared analysis Skill is available from this checkout for Codex and Claude Code. See [CLI validation](docs/validation.md) and [Skill validation](docs/skill-validation.md) for actual verification boundaries. Five-target CI, archive packaging, and tag-triggered GitHub Release automation are implemented; no binary release has been published by this work. Installation/update scripts remain pending. See [release procedures and platform boundaries](docs/releases.md).
 
 The CLI does not embed DuckDB or call an LLM. Agents use DuckDB directly for local computation and use the CLI for Logcove operations.
 

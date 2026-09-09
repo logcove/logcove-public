@@ -76,6 +76,16 @@ Complete and commit the Skill before changing CLI/Skill CI/CD. This first step i
 
 In the following step, distribute prebuilt binaries via GitHub Releases and include checksums, license, and matching CLI/Skill documentation. Start development on macOS while checking macOS, Linux, and Windows builds. Record actual supported release targets and tested runtimes. A stable HTTPS test deployment is required before an external test release; local development is not blocked by that deployment.
 
+Distribution is split into two batches. Batch 1 implements shared CI, five native platform builds (macOS ARM64/x64, Linux ARM64/x64, Windows x64), matching CLI/Skill archives, checksums and tag-triggered Releases. Batch 2 adds installation/update scripts and fresh-environment verification. CLI and Skill share the Cargo version. See [release procedures](releases.md) for triggers, artifacts, runtime boundaries and publication prerequisites.
+
+## Confirmed public origins (2026-09-08; deployment pending)
+
+The production web application will use `https://app.logcove.com`, and the public user API will use `https://api.logcove.com`. The website will use `https://logcove.com`; `https://docs.logcove.com` is reserved for a future documentation site. The shared Vector ingestion endpoint will be `https://ingest.logcove.com/logs`, authenticated with Project ID and write key, separate from the CLI's Session-authenticated API.
+
+The test web application and API will use `https://app-test.logcove.com` and `https://api-test.logcove.com`; test ingestion will use `https://ingest-test.logcove.com/logs`. These are agreed target addresses, not a claim that services are deployed or reachable.
+
+Before a stable public release, after the production API is deployed and verified, add `https://api.logcove.com` as the built-in fallback. Planned precedence is `--api-url`, then `LOGCOVE_API_URL`, then the saved API origin, then the built-in production origin. Upgrades preserve saved origins and origin-scoped credentials. Test releases use an explicitly configured test API. The current CLI still requires an explicit API origin, as described in batch 1; this documentation change does not change runtime behavior.
+
 ## Dependencies and maintenance
 
 | Dependency | Reason and alternative |
@@ -94,4 +104,4 @@ Commit the application lockfile. Main maintenance costs are dependency/security 
 
 - Batch 1 is implemented, with macOS tests, real browser authorization, native credential persistence, and local Project API verification completed. Linux and Windows verification boundaries are recorded in [validation.md](validation.md).
 - Batch 2 download/manifest and Chart commands are implemented. macOS and Linux ARM64 automated tests pass. Real R2 downloads, DuckDB verification of 100,000 synthetic events, Chart result operations, and rendering in the existing web UI have passed; see [validation.md](validation.md).
-- Batch 3 Skill authoring is implemented in `skills/logcove`, with source installation instructions in [skills.md](skills.md) and actual verification in [skill-validation.md](skill-validation.md). CLI/Skill CI/CD and hosted test deployment follow after the Skill commit. No CLI binary release has been published.
+- Batch 3 Skill authoring is implemented in `skills/logcove`, with source installation instructions in [skills.md](skills.md) and actual verification in [skill-validation.md](skill-validation.md). Distribution batch 1 CI/build/package/release automation is implemented; hosted workflow verification, hosted test deployment, and batch 2 installers/fresh-environment verification remain pending. No CLI binary release has been published.
