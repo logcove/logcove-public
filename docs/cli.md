@@ -1,21 +1,10 @@
 # CLI usage
 
-## Build
+## Install
 
-Use Rust 1.90 or newer:
+Download the prebuilt CLI for your platform from [v0.1.0](https://github.com/logcove/logcove-public/releases/tag/v0.1.0), extract it, and place `logcove` (`logcove.exe` on Windows) on PATH. Follow the [installation guide](../README.md#install) for macOS, Linux and Windows commands. Rust and a source checkout are not needed.
 
-```sh
-cargo build --locked
-./target/debug/logcove --help
-```
-
-To install a local build in Cargo's executable directory:
-
-```sh
-cargo install --path cli --locked
-```
-
-Prebuilt releases are not published yet. The CLI implements authentication, Project discovery, Parquet downloads, and Chart operations; the [analysis Skill](skills.md) is available from this checkout. These commands do not require DuckDB; install DuckDB separately for local analysis.
+The CLI implements authentication, Project discovery, Parquet downloads, and Chart operations. Each CLI package also includes the [analysis Skill](skills.md). CLI commands do not require DuckDB; install DuckDB separately for local analysis. Source builds and development commands are in the [development guide](development.md#local-development).
 
 ## Select an API environment
 

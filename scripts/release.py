@@ -79,11 +79,12 @@ def package_cli(value, target, output):
         staging = Path(temporary) / name
         staging.mkdir()
         shutil.copy2(binary, staging / executable)
-        shutil.copy2(ROOT / "LICENSE", staging / "LICENSE")
+        for document in ("LICENSE", "README.md", "AGENTS.md"):
+            shutil.copy2(ROOT / document, staging / document)
         (staging / "docs").mkdir()
         for document in (
             "cli.md", "skills.md", "releases.md", "validation.md",
-            "skill-validation.md", "implementation-plan.md",
+            "skill-validation.md", "implementation-plan.md", "development.md",
         ):
             shutil.copy2(ROOT / "docs" / document, staging / "docs" / document)
         copy_skill(staging / "skills/logcove")
@@ -93,7 +94,7 @@ def package_cli(value, target, output):
             "Run logcove --version to verify installation.\n"
             "Configure your deployed API with logcove config set-api-url <origin>,\n"
             "then run logcove login. No default API is built into this version.\n"
-            "See docs/cli.md, docs/skills.md and docs/releases.md.\n"
+            "See README.md for installation and quick start; docs/ has detailed guides.\n"
             "DuckDB is installed separately. Linux login requires an unlocked\n"
             "Secret Service. These archives are not code-signed or notarized.\n",
             encoding="utf-8",

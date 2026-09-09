@@ -4,13 +4,13 @@ The instruction-only Skill is in [`skills/logcove`](../skills/logcove/SKILL.md).
 
 ## Prerequisites
 
-- Install the CLI from this checkout with `cargo install --path cli --locked`, and ensure `logcove` is on the agent's PATH. Prebuilt archive automation is implemented, but no release is published by this work; see [release status](releases.md).
+- Install the [prebuilt CLI](../README.md#install), and ensure `logcove` is on the agent's PATH. Its archive includes the matching `skills/logcove/` folder; the Skill is also available as a [standalone ZIP](https://github.com/logcove/logcove-public/releases/download/v0.1.0/logcove-skills-v0.1.0.zip).
 - Configure your actual API origin and complete `logcove login`. See [CLI usage](cli.md) for browser authorization and OS credential-store requirements.
 - Provide a local DuckDB environment. Either the DuckDB CLI or Python package can be used; the Skill's examples use Python's `duckdb` package. A renderer is optional for local preview but necessary before claiming visual verification or image export.
 
 The Skill can guide login and source selection, but it does not supply a hosted Logcove deployment or create an account. A future container can reuse the instructions with suitable dependencies and its own authorized identity; noninteractive container authentication is not implemented here.
 
-## Install from the checkout
+## Install from a CLI package or checkout
 
 Copy the **whole `skills/logcove` directory**, including `references`, into the host's skills directory. Installing only `SKILL.md` loses the command and data-format references.
 
@@ -19,7 +19,7 @@ Copy the **whole `skills/logcove` directory**, including `references`, into the 
 | Codex | `~/.agents/skills/logcove/` | `.agents/skills/logcove/` | `$logcove` |
 | Claude Code | `~/.claude/skills/logcove/` | `.claude/skills/logcove/` | `/logcove` |
 
-From the root of this checkout, for a first user-wide install on macOS/Linux:
+From the root of the extracted CLI package (or source checkout), for a first user-wide install on macOS/Linux:
 
 ```sh
 # Codex

@@ -2,11 +2,11 @@
 
 ## Status and scope
 
-Batch 1 distribution automation is implemented: shared CI checks, five native build targets, CLI/Skill archives, SHA-256 checksums, and a tag-triggered GitHub Release workflow. All five platform jobs and the Skill/release checks passed on GitHub Actions for commit `90ccde0` on 2026-09-09; see the hosted validation record below. No release has been published. Hosted runner checks do not replace fresh-machine installation or real browser/credential-store acceptance.
+The [v0.1.0 release](https://github.com/logcove/logcove-public/releases/tag/v0.1.0) distributes five prebuilt CLI archives, the matching Skill ZIP and SHA256SUMS. Users install downloaded binaries; source builds are documented in the [development guide](development.md). All five platform jobs and the Skill/release checks passed on GitHub Actions for commit `90ccde0` on 2026-09-09; see the hosted validation record below. The release workflow also runs the full checks at its own tagged commit. Hosted runner checks do not replace fresh-machine installation or real browser/credential-store acceptance.
 
 Batch 2 remains planned: installation/update scripts and installation on fresh user environments. There is no self-update command, package-manager release, automatic Skill updater, bundled DuckDB, or code signing/notarization in batch 1.
 
-The CLI still requires an explicit API origin. The agreed default `https://api.logcove.com` is a future runtime change after deployment and verification. Before an external test release, provide a working HTTPS test service and instructions for configuring it. A stable public release also requires the production service and default-origin change.
+The CLI still requires an explicit API origin. The agreed default `https://api.logcove.com` is a future runtime change after deployment and verification. The 2026-09-09 release decision separates binary distribution from hosted-service rollout: v0.1.0 can be installed now and configured against an existing deployment. Publishing a CLI release does not deploy the API or make the planned production/test origins available. The README uses an explicitly marked example origin until a hosted service is available.
 
 ## Version and targets
 
@@ -52,13 +52,13 @@ logcove-skills-v0.1.0.zip
 SHA256SUMS
 ```
 
-Each CLI archive has a `logcove-v<version>-<target>/` root containing its executable, LICENSE, README.txt, matching public documentation and the small `skills/logcove/` source folder. This keeps the bundled documentation and Skill installation instructions usable after extraction. The separate Skill ZIP supports users who only need the Skill; it contains a directly installable `logcove/` folder with SKILL.md, all three references, LICENSE and VERSION. Install the complete folder using [Skill installation](skills.md), or follow the source-install instructions until a release exists.
+Each CLI archive has a `logcove-v<version>-<target>/` root containing its executable, LICENSE, README.txt, the user-facing README.md, matching public documentation and the small `skills/logcove/` source folder. AGENTS.md is included for the development guide's reference. This keeps documentation and Skill installation instructions usable after extraction. The separate Skill ZIP supports users who only need the Skill; it contains a directly installable `logcove/` folder with SKILL.md, all three references, LICENSE and VERSION. Install the complete folder using [Skill installation](skills.md).
 
 Check downloaded archives against SHA256SUMS before use (`sha256sum` on Linux, `shasum -a 256` on macOS, or `Get-FileHash -Algorithm SHA256` on Windows). These hashes detect file mismatch; they are not a substitute for platform code signing. Downloaded unsigned executables may have a different OS launch experience from local builds; fresh-machine verification and signing decisions remain batch 2 work.
 
 ## Publishing procedure
 
-1. Update the shared Cargo version and lockfile, review changes and release notes, and commit them. Check the hosted service prerequisites above before publishing externally.
+1. Update the shared Cargo version and lockfile, review changes and release notes, and commit them. State the actual API configuration requirements and supported deployment scope in the release notes.
 2. Explicitly authorize and push the matching version tag. Branch pushes and manual CI runs never publish releases.
 3. `release.yml` validates the tag before running the shared checks at that commit. Every target and the Skill job must pass.
 4. The publish job downloads artifacts from that workflow run, requires exactly the six expected archives, and writes SHA256SUMS. Only this job gets `contents: write` via GitHub's built-in token; no personal access token is needed.

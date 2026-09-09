@@ -1,35 +1,116 @@
 # Logcove CLI and Skills
 
-Use your own computer to analyze Logcove logs and create charts with your coding agent.
+Analyze your Logcove logs and create charts with Codex or Claude Code, using your own computer for DuckDB calculations.
 
-This public repository contains the Rust CLI, agent Skills, and user documentation. The CLI talks only to Logcove's public user APIs. Log collection, the web application, and service deployment are maintained separately.
+Download Parquet from your data sources, explore logs across Projects, and generate Vega-Lite charts. Keep an analysis local or save its chart and results to view in Logcove.
 
-## Development status
+## Install
 
-The implementation plan is in [docs/implementation-plan.md](docs/implementation-plan.md). The CLI implements configuration, browser authorization, persistent sessions, Project discovery, concurrent Parquet downloads, and Chart operations. The shared analysis Skill is available from this checkout for Codex and Claude Code. See [CLI validation](docs/validation.md) and [Skill validation](docs/skill-validation.md) for actual verification boundaries. Five-target CI, archive packaging, and tag-triggered GitHub Release automation are implemented; no binary release has been published by this work. Installation/update scripts remain pending. See [release procedures and platform boundaries](docs/releases.md).
+Download the **v0.1.0** package for your computer. No Rust toolchain or source checkout is needed.
 
-The CLI does not embed DuckDB or call an LLM. Agents use DuckDB directly for local computation and use the CLI for Logcove operations.
+| System | Download |
+| --- | --- |
+| macOS, Apple Silicon (M-series) | [macOS ARM64](https://github.com/logcove/logcove-public/releases/download/v0.1.0/logcove-v0.1.0-aarch64-apple-darwin.tar.gz) |
+| macOS, Intel | [macOS x64](https://github.com/logcove/logcove-public/releases/download/v0.1.0/logcove-v0.1.0-x86_64-apple-darwin.tar.gz) |
+| Linux, x64 | [Linux x64](https://github.com/logcove/logcove-public/releases/download/v0.1.0/logcove-v0.1.0-x86_64-unknown-linux-gnu.tar.gz) |
+| Linux, ARM64 | [Linux ARM64](https://github.com/logcove/logcove-public/releases/download/v0.1.0/logcove-v0.1.0-aarch64-unknown-linux-gnu.tar.gz) |
+| Windows, x64 | [Windows x64](https://github.com/logcove/logcove-public/releases/download/v0.1.0/logcove-v0.1.0-x86_64-pc-windows-msvc.zip) |
 
-## Try the CLI
+Extract the archive and open a terminal in the extracted `logcove-v0.1.0-...` folder. It contains the CLI, the Skill, and usage guides. [Release notes](https://github.com/logcove/logcove-public/releases/tag/v0.1.0) and [SHA-256 checksums](https://github.com/logcove/logcove-public/releases/download/v0.1.0/SHA256SUMS) are available with the download.
+
+**macOS / Linux**
 
 ```sh
-cargo build --locked
-./target/debug/logcove config set-api-url http://localhost:8787
-./target/debug/logcove login
-./target/debug/logcove whoami
-./target/debug/logcove projects list
+mkdir -p "$HOME/.local/bin"
+install -m 755 ./logcove "$HOME/.local/bin/logcove"
+export PATH="$HOME/.local/bin:$PATH"
+logcove --version
 ```
 
-After choosing a Project, use `logcove data pull` to download its Parquet files and a manifest. Analyze the manifest's files with DuckDB, then save SQL, a Vega-Lite specification, and aggregate results with `logcove charts create`. See the [download and Chart walkthrough](docs/cli.md#download-parquet).
+Add the `export PATH=...` line to your shell profile if `~/.local/bin` is not already on PATH.
 
-The localhost example requires a running Logcove development API and web application. For a hosted deployment, configure its actual HTTPS API origin. See [CLI usage](docs/cli.md) for installation, environment selection, authentication, and credential-store requirements.
+**Windows PowerShell**
 
-## Use with a coding agent
+```powershell
+New-Item -ItemType Directory -Force "$env:LOCALAPPDATA\Logcove\bin" | Out-Null
+Copy-Item .\logcove.exe "$env:LOCALAPPDATA\Logcove\bin\logcove.exe" -Force
+$env:Path = "$env:LOCALAPPDATA\Logcove\bin;$env:Path"
+logcove --version
+```
 
-Install the whole [`skills/logcove`](skills/logcove/SKILL.md) folder for your agent using [these instructions](docs/skills.md), then ask it to analyze a selected source and period. For example: `Use $logcove to analyze requests by service for the last complete UTC day and save a chart.` In Claude Code, invoke `/logcove`.
+Add `%LOCALAPPDATA%\Logcove\bin` to your user Path in Windows Environment Variables to use it in future terminals.
 
-The Skill guides discovery, manifest-based local DuckDB analysis, Vega-Lite generation, and optional Chart persistence. It does not ask the model to manage Session tokens or use Vector write keys for reads.
+Linux login requires a running, unlocked Secret Service; see [credential storage](docs/cli.md#credential-persistence). Packages are currently unsigned; see the [platform notes](docs/releases.md#version-and-targets) for compatibility details.
+
+For analysis, you also need Codex or Claude Code and a local [DuckDB](https://duckdb.org/docs/installation/) CLI or Python environment. DuckDB is installed separately from Logcove.
+
+## Quick start
+
+### 1. Connect and sign in
+
+You need a running Logcove deployment and an account. Replace the example address with the API origin supplied by your deployment:
+
+```sh
+logcove config set-api-url https://your-api.example.com
+logcove login
+logcove whoami
+logcove projects list
+```
+
+`login` opens your browser. Sign in and approve the CLI request; your session is saved in your OS credential store. For a link you can open manually, use `logcove login --no-browser`.
+
+The CLI currently requires an explicit API address. Each Project in the list is a data source you can explore.
+
+### 2. Install the Skill
+
+From the extracted CLI package folder, run the commands for your agent. These are first-install instructions for macOS/Linux; [Windows and other installation options](docs/skills.md#install-from-a-cli-package-or-checkout) are in the Skill guide.
+
+**Codex**
+
+```sh
+mkdir -p "$HOME/.agents/skills"
+cp -R skills/logcove "$HOME/.agents/skills/"
+```
+
+**Claude Code**
+
+```sh
+mkdir -p "$HOME/.claude/skills"
+cp -R skills/logcove "$HOME/.claude/skills/"
+```
+
+Copy the whole folder, including `references`. Start a new agent session if the Skill is not visible. If you already have the CLI, you can also download the [standalone Skill ZIP](https://github.com/logcove/logcove-public/releases/download/v0.1.0/logcove-skills-v0.1.0.zip); see the [Skill guide](docs/skills.md#distribution-archives).
+
+### 3. Ask about your logs
+
+In Codex:
+
+```text
+$logcove List my data sources, then help me analyze errors
+for the last complete UTC day. Keep the analysis local for now.
+```
+
+In Claude Code:
+
+```text
+/logcove List my data sources, then help me analyze errors
+for the last complete UTC day. Keep the analysis local for now.
+```
+
+The agent uses the CLI to download your data and DuckDB to calculate locally. When you want to save a chart, ask it to:
+
+```text
+Create a chart from this analysis and save it to Logcove.
+```
+
+Saving a chart uploads its SQL, Vega-Lite specification, aggregate results and metadata. You can also use the CLI directly; see the [download and Chart walkthrough](docs/cli.md#download-parquet).
+
+## Guides
+
+- [CLI reference](docs/cli.md): configuration, login, downloads and chart commands.
+- [Skill guide](docs/skills.md): installation, analysis workflow and usage examples.
+- [Development guide](docs/development.md): source layout, checks and release procedures.
 
 ## License
 
-Apache-2.0.
+[Apache-2.0](LICENSE).
