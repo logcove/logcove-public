@@ -67,8 +67,8 @@ Browser checks used the installed Playwright library and fresh headless Chrome c
 
 - Linux ARM64 compilation and all 54 mocked/command tests passed inside the official Rust 1.90 Bookworm container, including concurrent download and Chart contracts.
 - Linux native Secret Service persistence has not been run for this CLI. The container tests intentionally skip the explicit OS-store smoke test; users need a running and unlocked provider.
-- Local Windows GNU cross-check was attempted but could not complete because `x86_64-w64-mingw32-gcc` is unavailable for the TLS dependency build. This is not a passed Windows build or runtime test.
-- CI is configured for native macOS, Linux, and Windows checks, tests, and release compilation. No CI run is claimed before the repository is pushed.
+- The earlier local Windows GNU cross-check could not complete because `x86_64-w64-mingw32-gcc` was unavailable. Windows was subsequently validated with native MSVC on a GitHub runner, not by completing that GNU cross-check.
+- On 2026-09-09, [GitHub Actions run 34300891337](https://github.com/logcove/logcove-public/actions/runs/34300891337) at `90ccde0` passed all five targets: macOS ARM64/x64, Linux ARM64/x64, and Windows x64 MSVC. Each target passed formatting, Clippy, all 54 normal Rust tests, release compilation, packaging tests and extracted executable smoke checks. The explicit native credential test remained ignored. Actual downloaded artifacts and checksum generation were also verified; see [release validation](releases.md#hosted-ci-and-artifact-validation-2026-09-09).
 
 The actual Windows credential store, Windows browser open behavior, and distribution/install experience remain platform/release acceptance work.
 

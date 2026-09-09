@@ -2,7 +2,7 @@
 
 ## Status and scope
 
-Batch 1 distribution automation is implemented: shared CI checks, five native build targets, CLI/Skill archives, SHA-256 checksums, and a tag-triggered GitHub Release workflow. No release has been published as part of this implementation. Local checks do not prove that hosted jobs or all platform runtimes have passed; the first GitHub run must establish that evidence.
+Batch 1 distribution automation is implemented: shared CI checks, five native build targets, CLI/Skill archives, SHA-256 checksums, and a tag-triggered GitHub Release workflow. All five platform jobs and the Skill/release checks passed on GitHub Actions for commit `90ccde0` on 2026-09-09; see the hosted validation record below. No release has been published. Hosted runner checks do not replace fresh-machine installation or real browser/credential-store acceptance.
 
 Batch 2 remains planned: installation/update scripts and installation on fresh user environments. There is no self-update command, package-manager release, automatic Skill updater, bundled DuckDB, or code signing/notarization in batch 1.
 
@@ -100,3 +100,22 @@ python3 scripts/release.py cli --target aarch64-apple-darwin
 - Four packaging tests and two Skill tests passed, including the documented DuckDB computation and result limits. Five publishing scenarios passed with mocked `gh`; no GitHub calls were made by those tests.
 - `actionlint` 1.7.12 accepted the workflows. A real macOS ARM64 CLI archive and matching Skill ZIP were created locally, and the extracted CLI passed version/help/configuration checks.
 - No branch or tag was pushed, no GitHub-hosted workflow was run, and no Release was published. The other four target jobs, downloads from a real Release, platform signing, fresh-machine installation and native credential behavior still require their own verification.
+
+## Hosted CI and artifact validation (2026-09-09)
+
+The first run at `34c6bce` passed both macOS targets, both Linux targets, and the Skill job. Windows failed Clippy because a mutable `DirBuilder` was only mutated in Unix-specific code. Commit `90ccde0` scopes that mutable binding to Unix without changing directory creation or Unix permissions.
+
+[Run 34300891337](https://github.com/logcove/logcove-public/actions/runs/34300891337), at commit `90ccde07735417e09be0e5f622ecda447cb4917d`, completed successfully:
+
+| Job | Result |
+| --- | --- |
+| macOS ARM64 | Rust checks/tests, release build, packaging and extracted CLI smoke checks passed |
+| macOS x64 | Rust checks/tests, release build, packaging and extracted CLI smoke checks passed |
+| Linux ARM64 | Rust checks/tests, release build, packaging and extracted CLI smoke checks passed |
+| Linux x64 | Rust checks/tests, release build, packaging and extracted CLI smoke checks passed |
+| Windows x64 MSVC | Rust checks/tests, release build, packaging and extracted CLI smoke checks passed |
+| Skill and release checks | Skill metadata/examples, simulated publishing scenarios, and Skill ZIP upload passed |
+
+All six actual Actions archives were downloaded locally. The release script accepted the complete asset set, generated SHA256SUMS, and all six hashes were verified. Each CLI archive was extracted and checked for its executable, license and matching Skill content, normalizing Windows checkout line endings for text comparisons. The separate Skill ZIP's version and reference files matched the source. The downloaded macOS ARM64 executable also ran version and command-help checks locally.
+
+Artifacts and the local report are retained under ignored `experiments/ci-validation/34300891337/`. These are Actions artifacts, not GitHub Release downloads. The tag-triggered publishing API flow remains simulated, and no tag or Release was created. Browser authorization, native credential persistence on Windows/Linux, signing/notarization, installers and fresh-user installation remain separate acceptance work.
