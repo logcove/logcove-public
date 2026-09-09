@@ -54,13 +54,14 @@ class ReleaseTests(unittest.TestCase):
             value = release.version()
             names = [release.cli_name(value, target) for target in release.TARGETS]
             names.append(f"logcove-skills-v{value}.zip")
+            names.append(f"logcove-package-managers-v{value}.zip")
             for name in names[:-1]:
                 (root / name).write_bytes(name.encode())
             with self.assertRaises(ValueError):
                 release.checksums(value, root)
             (root / names[-1]).write_bytes(b"skill package")
             checksums = release.checksums(value, root)
-            self.assertEqual(len(checksums.read_text().splitlines()), 6)
+            self.assertEqual(len(checksums.read_text().splitlines()), 7)
             for line in checksums.read_text().splitlines():
                 digest, name = line.split("  ")
                 self.assertEqual(digest, hashlib.sha256((root / name).read_bytes()).hexdigest())

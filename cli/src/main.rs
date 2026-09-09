@@ -1,7 +1,12 @@
 use clap::{Parser, Subcommand};
 use logcove::{
-    auth::SystemClock, charts::ChartCommand, client::Api, config, credentials::OsCredentials,
+    auth::SystemClock,
+    charts::ChartCommand,
+    client::Api,
+    config,
+    credentials::OsCredentials,
     error::Result,
+    skills::{self, SkillCommand},
 };
 use serde_json::{json, Value};
 use std::{
@@ -28,6 +33,11 @@ struct Cli {
 
 #[derive(Subcommand)]
 enum Command {
+    /// Install the bundled analysis Skill for a coding agent
+    Skills {
+        #[command(subcommand)]
+        command: SkillCommand,
+    },
     /// Inspect or configure the API environment
     Config {
         #[command(subcommand)]
@@ -91,6 +101,9 @@ enum ProjectCommand {
 }
 
 fn run(cli: Cli) -> Result<Value> {
+    if let Command::Skills { command } = &cli.command {
+        return skills::run(command);
+    }
     let directory = config::config_dir(cli.config_dir)?;
     if let Command::Config {
         command: ConfigCommand::SetApiUrl { origin },
@@ -164,7 +177,7 @@ fn run(cli: Cli) -> Result<Value> {
                 },
         } => Ok(json!({"data":api.pull(&project_id, &from, &to, &output, concurrency)?})),
         Command::Charts { command } => api.chart_command(command),
-        Command::Config { .. } => unreachable!(),
+        Command::Config { .. } | Command::Skills { .. } => unreachable!(),
     }
 }
 

@@ -109,6 +109,7 @@ Saving a chart uploads its SQL, Vega-Lite specification, aggregate results and m
 
 - [CLI reference](docs/cli.md): configuration, login, downloads and chart commands.
 - [Skill guide](docs/skills.md): installation, analysis workflow and usage examples.
+- [Homebrew and WinGet](docs/package-managers.md): availability and installation at product launch.
 - [Development guide](docs/development.md): source layout, checks and release procedures.
 
 ## License

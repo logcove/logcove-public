@@ -56,6 +56,43 @@ jobs:
           if-no-files-found: error
           retention-days: 7
 
+  distribution:
+    name: Homebrew and WinGet metadata
+    needs: [cli, skill]
+    runs-on: ubuntu-22.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: cli-*
+          merge-multiple: true
+          path: dist
+      - uses: actions/download-artifact@v4
+        with:
+          name: skill
+          path: dist
+      - run: python -m pip install -r scripts/requirements-ci.txt
+      - run: python scripts/package_managers.py --assets dist
+      - run: python scripts/check_package_managers.py --assets dist
+      - name: Check Homebrew formula syntax
+        run: |
+          LOGCOVE_RELEASE_VERSION=$(python scripts/release.py version)
+          python -m zipfile -e "dist/logcove-package-managers-v${LOGCOVE_RELEASE_VERSION}.zip" package-check
+          ruby -c package-check/package-managers/Formula/logcove.rb
+      - run: python scripts/release.py checksums
+      - uses: actions/upload-artifact@v4
+        with:
+          name: package-managers
+          path: |
+            dist/logcove-package-managers-*.zip
+            dist/SHA256SUMS
+          if-no-files-found: error
+          retention-days: 7
+
   skill:
     name: Skill and release checks
     runs-on: ubuntu-22.04

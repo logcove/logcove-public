@@ -33,6 +33,7 @@ There is no CLI query engine, `data describe` command, bundled DuckDB, LLM clien
 | `data pull <project-id> --from <date> --to <date> --output <dir> [--concurrency <1-8>]` | 2 | Download Parquet for inclusive UTC ingestion dates |
 | `charts list/get/create/update/delete` | 2 | Manage Chart definitions |
 | `charts result put <id> --file <result.json>` | 2 | Replace the latest result |
+| `skills install --agent codex\|claude [--force]` | 3 | Install the Skill embedded in the CLI into the selected agent's user directory, without API access |
 
 Normal command output is stable JSON on stdout. Login instructions, progress, and warnings go to stderr. Failures return a nonzero exit code. Tokens and signed download URLs are not normal output. SQL, Vega-Lite specifications, and results are accepted through files in batch 2 to avoid shell escaping.
 
@@ -76,7 +77,9 @@ Complete and commit the Skill before changing CLI/Skill CI/CD. This first step i
 
 In the following step, distribute prebuilt binaries via GitHub Releases and include checksums, license, and matching CLI/Skill documentation. Start development on macOS while checking macOS, Linux, and Windows builds. Record actual supported release targets and tested runtimes. The 2026-09-09 release decision allows CLI binary distribution before the hosted test environment: users configure an existing deployment explicitly. A CLI release is not a hosted-service launch.
 
-Distribution is split into two batches. Batch 1 implements shared CI, five native platform builds (macOS ARM64/x64, Linux ARM64/x64, Windows x64), matching CLI/Skill archives, checksums and tag-triggered Releases. Batch 2 adds installation/update scripts and fresh-environment verification. CLI and Skill share the Cargo version. See [release procedures](releases.md) for triggers, artifacts, runtime boundaries and publication prerequisites.
+Distribution is split into two batches. Batch 1 implements shared CI, five native platform builds (macOS ARM64/x64, Linux ARM64/x64, Windows x64), matching CLI/Skill archives, checksums and tag-triggered Releases. Batch 2 uses Homebrew/WinGet for CLI installation and updates, adds a bundled Skill installer, and verifies installation in fresh environments. CLI and Skill share the Cargo version. See [release procedures](releases.md) for triggers, artifacts, runtime boundaries and publication prerequisites.
+
+The 2026-09-09 distribution decision selects Homebrew and WinGet only, with no npm package. Version 0.2.0 adds an embedded Skill installer and generates the package-manager metadata from actual archive hashes. The product repository stays private until launch; creation of a public tap, anonymous downloads and WinGet submission are deferred. No self-update daemon or extra CLI runtime dependency is introduced. See [package-manager distribution](package-managers.md).
 
 ## Confirmed public origins (2026-09-08; deployment pending)
 

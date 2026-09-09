@@ -85,6 +85,7 @@ def package_cli(value, target, output):
         for document in (
             "cli.md", "skills.md", "releases.md", "validation.md",
             "skill-validation.md", "implementation-plan.md", "development.md",
+            "package-managers.md",
         ):
             shutil.copy2(ROOT / "docs" / document, staging / "docs" / document)
         copy_skill(staging / "skills/logcove")
@@ -141,6 +142,7 @@ def package_skill(value, output):
 def checksums(value, output):
     expected = {cli_name(value, target) for target in TARGETS}
     expected.add(f"logcove-skills-v{value}.zip")
+    expected.add(f"logcove-package-managers-v{value}.zip")
     actual = {path.name for path in output.iterdir() if path.name != "SHA256SUMS"}
     if actual != expected:
         raise ValueError(f"Incomplete or unexpected assets: missing={expected - actual}, extra={actual - expected}")

@@ -10,6 +10,27 @@ The instruction-only Skill is in [`skills/logcove`](../skills/logcove/SKILL.md).
 
 The Skill can guide login and source selection, but it does not supply a hosted Logcove deployment or create an account. A future container can reuse the instructions with suitable dependencies and its own authorized identity; noninteractive container authentication is not implemented here.
 
+## Install with the CLI (0.2.0, unreleased)
+
+The 0.2.0 source version embeds the Skill in the CLI. It does not need an API address, login, network access, a source checkout, or a separate Skill download:
+
+```sh
+logcove skills install --agent codex
+logcove skills install --agent claude
+```
+
+Choose the agent you use. The command writes SKILL.md, all references, LICENSE and VERSION into the user-wide directory in the table below. An identical installation returns `status: "unchanged"`. Missing bundled files are filled in when all existing bundled files match. If any bundled file or VERSION differs, the command reports `SKILL_INSTALL_CONFLICT` before writing anything. To replace an older version or deliberate local edits:
+
+```sh
+logcove skills install --agent codex --force
+```
+
+`--force` replaces only bundled files and preserves extra user files. It does not follow a symlink at the Skill directory, references directory or managed file paths, even with `--force`; a symlinked development checkout must be managed separately. File-system failures return `SKILL_INSTALL_ERROR`; a failed write may leave an incomplete installation that needs a retry. Skill installation is not a directory-wide transaction or an automatic background updater.
+
+The command returns JSON with the selected agent, installed path, bundled version, and `installed`/`unchanged` status. CLI upgrades do not silently change an agent's installed Skill. API configuration, sessions and API-key permissions are not involved.
+
+The published 0.1.0 CLI does not have this command. Use the manual installation below until a version containing it is released.
+
 ## Install from a CLI package or checkout
 
 Copy the **whole `skills/logcove` directory**, including `references`, into the host's skills directory. Installing only `SKILL.md` loses the command and data-format references.
@@ -47,7 +68,7 @@ These are local installation instructions, not a plugin-marketplace release or a
 
 The build workflow packages this same Skill with the CLI's version. A CLI archive includes `skills/logcove/`, so the checkout copy instructions above also work from its extracted root. The separate `logcove-skills-v<version>.zip` extracts directly to `logcove/`; copy that entire folder into the appropriate host directory from the table above. Do not copy only SKILL.md. The separate ZIP includes a VERSION file and LICENSE.
 
-Check the release's SHA256SUMS before extracting. Release publication and automated installation/update are distinct: the tag-triggered release workflow is implemented, but installation/update scripts and fresh-environment verification remain the next batch. See [release procedures](releases.md) for the actual publication status.
+Check the release's SHA256SUMS before extracting. The tag-triggered release workflow is implemented; CLI-based Skill installation is implemented in unreleased 0.2.0. Homebrew/WinGet publication and fresh-environment package-manager tests remain pending. See [release procedures](releases.md) for the actual publication status.
 
 ## Try a task
 

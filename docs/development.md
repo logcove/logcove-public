@@ -60,9 +60,11 @@ Skill and packaging checks use Python 3.12 or newer. Packaging uses the standard
 
 ## Implementation and release status
 
+The next source version is 0.2.0 (unreleased). It adds local `skills install` commands and generation of Homebrew/WinGet metadata from built archives. The repository remains private and no package-index submission is configured; see [package-manager distribution](package-managers.md).
+
 The CLI and shared analysis Skill are implemented. Five-platform CI, archive packaging and tag-triggered release automation are also implemented, with successful hosted checks for macOS ARM64/x64, Linux ARM64/x64 and Windows x64. A passing build does not establish real browser login, native credential-store behavior or installation on every supported desktop.
 
-The first binary release is `v0.1.0`, with five platform archives, a standalone Skill ZIP and SHA256SUMS. Installation/update scripts and fresh-environment verification remain the next distribution batch; the README documents manual installation of downloaded binaries. Do not push a version tag to test ordinary CI: tag pushes trigger publication after the checks pass.
+The first binary release is `v0.1.0`, with five platform archives, a standalone Skill ZIP and SHA256SUMS. Homebrew/WinGet publication and fresh-environment installation tests remain pending; the README documents manual installation of released binaries. Do not push a version tag to test ordinary CI: tag pushes trigger publication after the checks pass.
 
 - [Implementation plan](implementation-plan.md): scope, responsibilities and delivery batches.
 - [CLI validation](validation.md): automated checks, live workflows and platform boundaries.
