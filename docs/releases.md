@@ -2,11 +2,11 @@
 
 ## Status and scope
 
-The [v0.1.0 release](https://github.com/logcove/logcove-public/releases/tag/v0.1.0) distributes five prebuilt CLI archives, the matching Skill ZIP and SHA256SUMS. Users install downloaded binaries; source builds are documented in the [development guide](development.md). All five platform jobs and the Skill/release checks passed on GitHub Actions for commit `90ccde0` on 2026-09-09; see the hosted validation record below. The release workflow also runs the full checks at its own tagged commit. Hosted runner checks do not replace fresh-machine installation or real browser/credential-store acceptance.
+The [v0.2.0 release](https://github.com/logcove/logcove-public/releases/tag/v0.2.0) packages five prebuilt CLI archives, the matching Skill ZIP, Homebrew/WinGet metadata and SHA256SUMS. Users install downloaded binaries; source builds are documented in the [development guide](development.md). All five platform jobs and the Skill/release checks passed on GitHub Actions for commit `90ccde0` on 2026-09-09; see the hosted validation record below. The release workflow also runs the full checks at its own tagged commit. Hosted runner checks do not replace fresh-machine installation or real browser/credential-store acceptance.
 
 The original batch 2 installation/update-script plan is superseded by Homebrew and WinGet distribution plus a bundled Skill installer. Fresh-environment package-manager installation remains pending. There is no self-update command, automatic Skill updater, bundled DuckDB, or code signing/notarization.
 
-The next source version, 0.2.0, adds the bundled `skills install` command and Homebrew/WinGet metadata generation. Metadata is prepared privately; neither a public tap nor a WinGet submission is created before product launch. There is no npm distribution. See [package-manager distribution](package-managers.md). Version 0.2.0 is not published yet.
+Version 0.2.0 adds the bundled `skills install` command and Homebrew/WinGet metadata generation. Metadata is prepared privately; neither a public tap nor a WinGet submission is created before product launch. There is no npm distribution. See [package-manager distribution](package-managers.md).
 
 The CLI still requires an explicit API origin. The agreed default `https://api.logcove.com` is a future runtime change after deployment and verification. The 2026-09-09 release decision separates binary distribution from hosted-service rollout: v0.1.0 can be installed now and configured against an existing deployment. Publishing a CLI release does not deploy the API or make the planned production/test origins available. The README uses an explicitly marked example origin until a hosted service is available.
 
@@ -26,6 +26,13 @@ Each job runs on its target architecture and uses Rust 1.90.0 with `--locked`. T
 
 Runner labels are from [GitHub-hosted runner documentation](https://docs.github.com/en/actions/reference/runners/github-hosted-runners). The repository must have Actions enabled and access to these runners, including ARM64 Linux.
 
+### Known installation limitations in 0.2.0
+
+- The Windows MSVC executable depends on the x64 Visual C++ Runtime (`VCRUNTIME140.dll`). The prepared WinGet manifest does not yet declare that dependency; users need the runtime installed separately.
+- The Linux ARM64 release uses the Ubuntu 24.04/glibc 2.39 baseline. The 0.1.0 archive from this unchanged build configuration fails to start on Debian 12 with missing `GLIBC_2.38`/`GLIBC_2.39` errors. The Homebrew formula does not yet check that requirement, and installation on older glibc systems is unverified.
+
+These two compatibility fixes are deferred. Metadata generation does not make Homebrew or WinGet installation publicly available; the repository remains private until product launch.
+
 ## Checks and packaging
 
 `.github/workflows/ci.yml` runs on branch pushes, pull requests, and manual dispatch. It calls `checks.yml`, which is also reused by `release.yml` at the tagged commit:
@@ -43,7 +50,7 @@ Branch and PR runs upload the same package format as Actions artifacts, retained
 
 ## Release assets
 
-Starting with the upcoming version `0.2.0`, a complete release has seven archives plus one checksum file (the released `0.1.0` has no package-manager metadata archive):
+Starting with version `0.2.0`, a complete release has seven archives plus one checksum file (the released `0.1.0` has no package-manager metadata archive):
 
 ```text
 logcove-v0.2.0-aarch64-apple-darwin.tar.gz

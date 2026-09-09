@@ -6,17 +6,17 @@ Download Parquet from your data sources, explore logs across Projects, and gener
 
 ## Install
 
-Download the **v0.1.0** package for your computer. No Rust toolchain or source checkout is needed.
+Download the **v0.2.0** package for your computer. No Rust toolchain or source checkout is needed.
 
 | System | Download |
 | --- | --- |
-| macOS, Apple Silicon (M-series) | [macOS ARM64](https://github.com/logcove/logcove-public/releases/download/v0.1.0/logcove-v0.1.0-aarch64-apple-darwin.tar.gz) |
-| macOS, Intel | [macOS x64](https://github.com/logcove/logcove-public/releases/download/v0.1.0/logcove-v0.1.0-x86_64-apple-darwin.tar.gz) |
-| Linux, x64 | [Linux x64](https://github.com/logcove/logcove-public/releases/download/v0.1.0/logcove-v0.1.0-x86_64-unknown-linux-gnu.tar.gz) |
-| Linux, ARM64 | [Linux ARM64](https://github.com/logcove/logcove-public/releases/download/v0.1.0/logcove-v0.1.0-aarch64-unknown-linux-gnu.tar.gz) |
-| Windows, x64 | [Windows x64](https://github.com/logcove/logcove-public/releases/download/v0.1.0/logcove-v0.1.0-x86_64-pc-windows-msvc.zip) |
+| macOS, Apple Silicon (M-series) | [macOS ARM64](https://github.com/logcove/logcove-public/releases/download/v0.2.0/logcove-v0.2.0-aarch64-apple-darwin.tar.gz) |
+| macOS, Intel | [macOS x64](https://github.com/logcove/logcove-public/releases/download/v0.2.0/logcove-v0.2.0-x86_64-apple-darwin.tar.gz) |
+| Linux, x64 | [Linux x64](https://github.com/logcove/logcove-public/releases/download/v0.2.0/logcove-v0.2.0-x86_64-unknown-linux-gnu.tar.gz) |
+| Linux, ARM64 | [Linux ARM64](https://github.com/logcove/logcove-public/releases/download/v0.2.0/logcove-v0.2.0-aarch64-unknown-linux-gnu.tar.gz) |
+| Windows, x64 | [Windows x64](https://github.com/logcove/logcove-public/releases/download/v0.2.0/logcove-v0.2.0-x86_64-pc-windows-msvc.zip) |
 
-Extract the archive and open a terminal in the extracted `logcove-v0.1.0-...` folder. It contains the CLI, the Skill, and usage guides. [Release notes](https://github.com/logcove/logcove-public/releases/tag/v0.1.0) and [SHA-256 checksums](https://github.com/logcove/logcove-public/releases/download/v0.1.0/SHA256SUMS) are available with the download.
+Extract the archive and open a terminal in the extracted `logcove-v0.2.0-...` folder. It contains the CLI, the Skill, and usage guides. [Release notes](https://github.com/logcove/logcove-public/releases/tag/v0.2.0) and [SHA-256 checksums](https://github.com/logcove/logcove-public/releases/download/v0.2.0/SHA256SUMS) are available with the download.
 
 **macOS / Linux**
 
@@ -63,23 +63,21 @@ The CLI currently requires an explicit API address. Each Project in the list is 
 
 ### 2. Install the Skill
 
-From the extracted CLI package folder, run the commands for your agent. These are first-install instructions for macOS/Linux; [Windows and other installation options](docs/skills.md#install-from-a-cli-package-or-checkout) are in the Skill guide.
+Run the command for your agent on macOS, Linux or Windows. The Skill is bundled in the CLI; installation does not require a separate download or login.
 
 **Codex**
 
 ```sh
-mkdir -p "$HOME/.agents/skills"
-cp -R skills/logcove "$HOME/.agents/skills/"
+logcove skills install --agent codex
 ```
 
 **Claude Code**
 
 ```sh
-mkdir -p "$HOME/.claude/skills"
-cp -R skills/logcove "$HOME/.claude/skills/"
+logcove skills install --agent claude
 ```
 
-Copy the whole folder, including `references`. Start a new agent session if the Skill is not visible. If you already have the CLI, you can also download the [standalone Skill ZIP](https://github.com/logcove/logcove-public/releases/download/v0.1.0/logcove-skills-v0.1.0.zip); see the [Skill guide](docs/skills.md#distribution-archives).
+Start a new agent session if the Skill is not visible. If an older or customized copy is installed, review your changes and rerun with `--force` to replace bundled files. Extra user files are preserved. A [standalone Skill ZIP](https://github.com/logcove/logcove-public/releases/download/v0.2.0/logcove-skills-v0.2.0.zip) and [manual installation instructions](docs/skills.md#install-from-a-cli-package-or-checkout) are also available.
 
 ### 3. Ask about your logs
 

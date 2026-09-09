@@ -4,7 +4,7 @@
 
 Homebrew and WinGet are the selected package-manager channels. There is no npm package. The repository remains private until the product launch; package metadata generation does not change its visibility, create a public tap, or submit a public WinGet manifest.
 
-The generator and CI validation are implemented for the unreleased 0.2.0 source version. Version 0.1.0 remains the released CLI and uses manual archive installation. Public package-manager installation is not available yet: both channels require release URLs that ordinary users can download without GitHub authentication.
+Version 0.2.0 includes the generator and CI validation. Install the CLI from its release archive. Public package-manager installation is not available yet: both channels require release URLs that ordinary users can download without GitHub authentication.
 
 ## User installation after launch
 
@@ -31,7 +31,7 @@ logcove skills install --agent codex
 logcove skills install --agent claude
 ```
 
-After a CLI upgrade, review any local Skill changes, then use `--force` to replace files from an older version. See [Skill installation](skills.md#install-with-the-cli-020-unreleased) for the exact behavior. This command is not included in the published 0.1.0 binary.
+After a CLI upgrade, review any local Skill changes, then use `--force` to replace files from an older version. See [Skill installation](skills.md#install-with-the-cli-020) for the exact behavior. This command is not included in the published 0.1.0 binary.
 
 ## Generated metadata
 

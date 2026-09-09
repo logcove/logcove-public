@@ -2,18 +2,18 @@
 
 ## Install
 
-Download the prebuilt CLI for your platform from [v0.1.0](https://github.com/logcove/logcove-public/releases/tag/v0.1.0), extract it, and place `logcove` (`logcove.exe` on Windows) on PATH. Follow the [installation guide](../README.md#install) for macOS, Linux and Windows commands. Rust and a source checkout are not needed.
+Download the prebuilt CLI for your platform from [v0.2.0](https://github.com/logcove/logcove-public/releases/tag/v0.2.0), extract it, and place `logcove` (`logcove.exe` on Windows) on PATH. Follow the [installation guide](../README.md#install) for macOS, Linux and Windows commands. Rust and a source checkout are not needed.
 
 The CLI implements authentication, Project discovery, Parquet downloads, and Chart operations. Each CLI package also includes the [analysis Skill](skills.md). CLI commands do not require DuckDB; install DuckDB separately for local analysis. Source builds and development commands are in the [development guide](development.md#local-development).
 
-## Install the bundled Skill (0.2.0, unreleased)
+## Install the bundled Skill (0.2.0+)
 
 ```sh
 logcove skills install --agent codex
 logcove skills install --agent claude
 ```
 
-This local command works before configuring an API or logging in, including when an unrelated API configuration file is invalid. It installs the Skill embedded in this CLI into the selected agent's user directory. Repeating an identical installation is a no-op; different existing bundled files require explicit `--force`. It preserves extra files and rejects symlinked installation targets. See [Skill installation](skills.md#install-with-the-cli-020-unreleased) for paths, output and overwrite behavior. The published 0.1.0 binary does not include this command.
+This local command works before configuring an API or logging in, including when an unrelated API configuration file is invalid. It installs the Skill embedded in this CLI into the selected agent's user directory. Repeating an identical installation is a no-op; different existing bundled files require explicit `--force`. It preserves extra files and rejects symlinked installation targets. See [Skill installation](skills.md#install-with-the-cli-020) for paths, output and overwrite behavior. The published 0.1.0 binary does not include this command.
 
 ## Select an API environment
 

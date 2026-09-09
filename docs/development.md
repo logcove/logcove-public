@@ -20,7 +20,7 @@ Read [AGENTS.md](../AGENTS.md) before changing code. Keep credentials, real logs
 
 ## Local development
 
-Use Rust 1.90 or newer and the committed Cargo.lock. End users can install the prebuilt CLI from the [Release](https://github.com/logcove/logcove-public/releases/tag/v0.1.0); building from source is for development.
+Use Rust 1.90 or newer and the committed Cargo.lock. End users can install the prebuilt CLI from the [Release](https://github.com/logcove/logcove-public/releases/tag/v0.2.0); building from source is for development.
 
 ```sh
 git clone https://github.com/logcove/logcove-public.git
@@ -60,7 +60,7 @@ Skill and packaging checks use Python 3.12 or newer. Packaging uses the standard
 
 ## Implementation and release status
 
-The next source version is 0.2.0 (unreleased). It adds local `skills install` commands and generation of Homebrew/WinGet metadata from built archives. The repository remains private and no package-index submission is configured; see [package-manager distribution](package-managers.md).
+Version 0.2.0 adds local `skills install` commands and generation of Homebrew/WinGet metadata from built archives. The repository remains private and no package-index submission is configured; see [package-manager distribution](package-managers.md).
 
 The CLI and shared analysis Skill are implemented. Five-platform CI, archive packaging and tag-triggered release automation are also implemented, with successful hosted checks for macOS ARM64/x64, Linux ARM64/x64 and Windows x64. A passing build does not establish real browser login, native credential-store behavior or installation on every supported desktop.
 

@@ -4,15 +4,15 @@ The instruction-only Skill is in [`skills/logcove`](../skills/logcove/SKILL.md).
 
 ## Prerequisites
 
-- Install the [prebuilt CLI](../README.md#install), and ensure `logcove` is on the agent's PATH. Its archive includes the matching `skills/logcove/` folder; the Skill is also available as a [standalone ZIP](https://github.com/logcove/logcove-public/releases/download/v0.1.0/logcove-skills-v0.1.0.zip).
+- Install the [prebuilt CLI](../README.md#install), and ensure `logcove` is on the agent's PATH. Its archive includes the matching `skills/logcove/` folder; the Skill is also available as a [standalone ZIP](https://github.com/logcove/logcove-public/releases/download/v0.2.0/logcove-skills-v0.2.0.zip).
 - Configure your actual API origin and complete `logcove login`. See [CLI usage](cli.md) for browser authorization and OS credential-store requirements.
 - Provide a local DuckDB environment. Either the DuckDB CLI or Python package can be used; the Skill's examples use Python's `duckdb` package. A renderer is optional for local preview but necessary before claiming visual verification or image export.
 
 The Skill can guide login and source selection, but it does not supply a hosted Logcove deployment or create an account. A future container can reuse the instructions with suitable dependencies and its own authorized identity; noninteractive container authentication is not implemented here.
 
-## Install with the CLI (0.2.0, unreleased)
+## Install with the CLI (0.2.0+)
 
-The 0.2.0 source version embeds the Skill in the CLI. It does not need an API address, login, network access, a source checkout, or a separate Skill download:
+CLI 0.2.0 embeds the Skill in the CLI. It does not need an API address, login, network access, a source checkout, or a separate Skill download:
 
 ```sh
 logcove skills install --agent codex
@@ -29,7 +29,7 @@ logcove skills install --agent codex --force
 
 The command returns JSON with the selected agent, installed path, bundled version, and `installed`/`unchanged` status. CLI upgrades do not silently change an agent's installed Skill. API configuration, sessions and API-key permissions are not involved.
 
-The published 0.1.0 CLI does not have this command. Use the manual installation below until a version containing it is released.
+CLI 0.1.0 does not have this command. Upgrade to 0.2.0 or use the manual installation below.
 
 ## Install from a CLI package or checkout
 
@@ -68,7 +68,7 @@ These are local installation instructions, not a plugin-marketplace release or a
 
 The build workflow packages this same Skill with the CLI's version. A CLI archive includes `skills/logcove/`, so the checkout copy instructions above also work from its extracted root. The separate `logcove-skills-v<version>.zip` extracts directly to `logcove/`; copy that entire folder into the appropriate host directory from the table above. Do not copy only SKILL.md. The separate ZIP includes a VERSION file and LICENSE.
 
-Check the release's SHA256SUMS before extracting. The tag-triggered release workflow is implemented; CLI-based Skill installation is implemented in unreleased 0.2.0. Homebrew/WinGet publication and fresh-environment package-manager tests remain pending. See [release procedures](releases.md) for the actual publication status.
+Check the release's SHA256SUMS before extracting. The tag-triggered release workflow is implemented; CLI-based Skill installation is available starting with 0.2.0. Homebrew/WinGet publication and fresh-environment package-manager tests remain pending. See [release procedures](releases.md) for the actual publication status.
 
 ## Try a task
 
