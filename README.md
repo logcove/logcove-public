@@ -105,7 +105,9 @@ Saving a chart uploads its SQL, Vega-Lite specification and metadata. Results st
 
 ## Guides
 
-- [CLI reference](docs/cli.md): configuration, login, downloads and chart commands.
+The current source also supports [Project and write-key management](docs/cli.md#manage-projects-and-write-keys). Newly created Key secrets are saved to a private local file; commands return its path. These management commands are not included in the published v0.2.0 packages yet.
+
+- [CLI reference](docs/cli.md): configuration, login, Project/Key management, downloads and chart commands.
 - [Skill guide](docs/skills.md): installation, analysis workflow and usage examples.
 - [Homebrew and WinGet](docs/package-managers.md): availability and installation at product launch.
 - [Development guide](docs/development.md): source layout, checks and release procedures.

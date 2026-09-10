@@ -26,7 +26,7 @@ logcove data pull prj_00000000-0000-4000-8000-000000000001 \
   --from 2026-09-01 --to 2026-09-02 --output ./analysis/logs
 ```
 
-Replace example IDs and dates with discovered values and the selected range. `projects list` already follows all pages and returns active readable Projects. `projects get` may describe an archived Project, which does not make its data downloadable. Metadata includes `id`, `name`, `description`, `status`, `data_prefix`, and timestamps.
+Replace example IDs and dates with discovered values and the selected range. `projects list` follows all pages and defaults to active Projects; `--status archived` or `--status all` includes archived metadata. `projects get` may describe an archived Project, which does not make its data downloadable. Management output includes `id`, `name`, `description`, `status`, `data_prefix`, `write_key_id`, `ingestion.desired_revision`, and timestamps.
 
 `data pull` handles pagination, signing, retries for expired access, concurrency, object validation, and manifest publication. A completed response is:
 
@@ -37,6 +37,46 @@ Replace example IDs and dates with discovered values and the selected range. `pr
 Each invocation creates a new run directory. Its manifest records `api_url`, `project_id`, `start_date`, `end_date`, `completed_at`, and `files`; each file has an object `key`, `size`, `etag`, `ingest_date`, `uploaded_at`, and relative `path`. The manifest contains no signed URLs. A retry starts a new run, not a resume of the previous one.
 
 For more than 93 ingestion days, use separate bounded pulls only for the requested coverage and data still available from retention. Do not combine overlapping pulls of the same objects as extra events; see [duckdb.md](duckdb.md).
+
+## Manage Projects and write keys
+
+These commands require the current management-capable CLI; the published v0.2.0 binary lacks them. Check `projects --help` and `keys --help`. They use the saved login Session and do not need DuckDB or data downloads.
+
+```sh
+logcove projects create --name "Backend logs" --description "HTTP requests"
+logcove keys create --name "Backend collector" \
+  --project-id prj_00000000-0000-4000-8000-000000000001 \
+  --output /path/to/private/collector.key
+logcove projects get prj_00000000-0000-4000-8000-000000000001
+```
+
+Use the returned Project ID. Choose a new file outside source control in an existing directory. `keys create` writes the raw credential plus a newline there, with `0600` permissions on Unix or a protected owner-only DACL on Windows. It returns masked metadata, the Key ID and an absolute `data.key_file`, never `data.key`. Do not cat, echo, include, or ask the user to paste the secret. A collector setup script may read the file internally without printing it. The CLI never overwrites an existing destination.
+
+Commands for subsequent management:
+
+```sh
+logcove projects list --status all
+logcove projects update prj_00000000-0000-4000-8000-000000000001 --name "Renamed logs"
+logcove projects update prj_00000000-0000-4000-8000-000000000001 --clear-description
+logcove projects update prj_00000000-0000-4000-8000-000000000001 --write-key-id key_00000000-0000-4000-8000-000000000001
+logcove projects update prj_00000000-0000-4000-8000-000000000001 --clear-write-key
+logcove projects archive prj_00000000-0000-4000-8000-000000000001
+logcove projects restore prj_00000000-0000-4000-8000-000000000001
+logcove keys list --status active
+logcove keys get key_00000000-0000-4000-8000-000000000001
+logcove keys update key_00000000-0000-4000-8000-000000000001 --name "Renamed collector"
+logcove keys set-projects key_00000000-0000-4000-8000-000000000001 --project-id prj_00000000-0000-4000-8000-000000000001
+logcove keys set-projects key_00000000-0000-4000-8000-000000000001 --clear-projects
+logcove keys revoke key_00000000-0000-4000-8000-000000000001
+```
+
+These are independent examples, not a setup script to run in sequence. Only perform mutations covered by the user's request. Archive preserves logs but disables reads and ingestion; restore reverses that status. There is no hard-delete Project command. Revocation is irreversible, unbinds every Project, and preserves masked metadata; it does not delete local credential files.
+
+One Project can have one write key. Key creation and `keys set-projects` reject Projects already using another Key. `set-projects` replaces the **entire** set: supply every intended Project with repeated `--project-id`, or explicitly clear it. For intentional single-Project replacement, use `projects update --write-key-id` with the Key resource ID. Names/descriptions and a binding change can share one Project update.
+
+Management success means the desired state was saved. Vector applies ingestion changes asynchronously; `ingestion.desired_revision` is not a loaded-state acknowledgement. Do not claim the collector has already accepted the new key solely from management success.
+
+If local file reservation fails (`KEY_FILE_ERROR`), no creation request was sent. If creation's response is lost, inspect `keys list` before retrying; the API cannot recover the secret. If saving fails after creation (`KEY_FILE_WRITE_FAILED`), the error provides the created Key ID and a revoke command. Explain the partial outcome and handle that Key within the user's authorized scope before retrying. Never print API response bodies or secret files to diagnose it.
 
 ## Output and recovery
 
@@ -49,7 +89,7 @@ Successful operations return JSON on stdout, usually under `data`. Help/version 
 | `ACCESS_DENIED`, `NOT_FOUND` | Check the selected account, resource, and environment; do not restart login automatically |
 | `NETWORK_ERROR`, `SERVER_ERROR`, `RATE_LIMITED` | Report the failure and request ID if present; retry reads only when appropriate, without an unbounded loop |
 | `OBJECT_CHANGED`, `DOWNLOAD_FAILED`, `DOWNLOAD_DENIED` | Do not analyze the incomplete pull; a new pull starts fresh, and `--concurrency 1` may help diagnose connection pressure |
-| `CONFLICT` | Read the current Chart, reconcile the intended edit, then use its revision |
+| `CONFLICT` | For Charts, reconcile the latest revision; for Keys, inspect revocation and Project bindings before choosing an explicit replacement |
 | `INVALID_INPUT`, `PAYLOAD_TOO_LARGE` | Correct command/input files or reduce aggregate size; do not silently truncate rows |
 
 A failed write may have reached the service before its response was lost. Inspect existing state before retrying Chart creation or other mutations, to avoid duplicates or overwrites. This Skill grants no additional permission to delete Charts, revoke sessions, or change configuration beyond the user's task.

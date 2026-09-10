@@ -1,6 +1,6 @@
 ---
 name: logcove
-description: Analyze Logcove logs and create or update charts using the Logcove CLI, local DuckDB, and Vega-Lite. Use for discovering Logcove Projects, downloading their Parquet data, investigating logs across sources, or saving analysis results as Logcove Charts.
+description: Manage Logcove Projects and write keys, analyze logs, and create charts using the Logcove CLI, local DuckDB, and Vega-Lite. Use for setting up log sources, downloading Parquet, investigating logs across sources, or saving Logcove Charts.
 ---
 
 # Logcove analysis
@@ -15,6 +15,12 @@ Use `logcove` for service operations and a locally available DuckDB environment 
 - For command syntax, authentication recovery, and output handling, read [references/cli.md](references/cli.md). If the CLI is unavailable, explain that it must be installed; do not replace it with handwritten authenticated API calls.
 
 Choose the workflow needed for the request. For viewing an existing Chart or changing only its name, description, or style, go directly to [references/charts.md](references/charts.md): retrieve the Chart and inspect its saved definition. Do not download logs, execute SQL, for those tasks. Download and compute when the request requires new analysis or recalculation; reuse suitable completed manifests already available for the selected coverage instead of downloading them again.
+
+## Manage sources and write keys
+
+For setup or management requests, use the Project and Key commands in [references/cli.md](references/cli.md#manage-projects-and-write-keys). Check the installed command's help: published older binaries do not have these operations. Follow the user's authorized resource scope; ordinary analysis does not require creating or modifying keys.
+
+Key creation requires `--output` pointing to a new private file. Return `data.key_file` and masked metadata; do not read the file into the conversation, print its contents, or place the secret in command arguments. When configuring an authorized collector, use code that reads the file internally without logging its contents. Write keys are for ingestion only; reads and management use the existing login Session. Inspect current bindings before replacing them, and do not automatically retry uncertain creation failures.
 
 ## Choose and download data
 

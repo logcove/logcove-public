@@ -6,5 +6,7 @@ pub mod credentials;
 pub mod data;
 pub mod error;
 pub mod files;
+pub mod management;
 pub mod models;
+mod secret_file;
 pub mod skills;

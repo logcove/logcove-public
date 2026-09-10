@@ -1,5 +1,17 @@
 # CLI validation
 
+## Project/Key management validation (2026-09-10)
+
+Current source adds Project creation, metadata/binding updates, archive/restore and status-filtered lists, plus Key list/get/create/rename/binding replacement/revocation. This uses existing public APIs; no backend, live account resources, installed CLI/Skill, or release was changed.
+
+- macOS: 68 Rust tests passed, with the existing real OS-credential test ignored. Formatting and Clippy with warnings denied passed. The 11 management contract tests cover the command workflow, status/filter pagination, metadata including write-key/revision, binding replacement and clearing, revocation, argument validation, API errors, redacted outputs, existing-file/symlink refusal, private file contents/permissions, and once-only secret response failures. A separate private-file unit test covers write failure and cleanup.
+- Tests use a local HTTP fixture and real local files, not the hosted API or a real collector. Existing core API transaction/authorization tests are separate from these CLI tests.
+- Two executable Skill/reference tests and Skill structure validation passed. Existing installation tests still cover the embedded Skill files.
+- Windows-only `windows-sys` directly uses the already locked version to set a protected owner-only DACL when the file is created. A Windows-specific test reads back the DACL and is included in normal Windows test runs. The exact file module and its tests passed an isolated Windows GNU cross-target type check; this is not Windows runtime verification.
+- A full Windows GNU cross-check was blocked by the missing `x86_64-w64-mingw32-gcc` compiler required by the existing `ring` dependency. No Windows runtime, Linux runtime, or new hosted CI run is claimed for this change. The established Windows MSVC CI job will exercise the ACL test when these changes are pushed.
+
+Commands are available in a source build; published v0.2.0 remains unchanged. Key creation only reports success after the private file is written and synced. The plaintext credential is not part of any command's JSON output.
+
 Current working-tree change: Charts now store definitions only. Result-upload/R2 checks below describe the older contract. The current implementation removes result commands, filters Project views by system `_created_time` before executing parameter-free SQL, and renders local calculations in the web/desktop app. Release and installed copies have not been updated.
 
 Date: 2026-09-08. This is local development verification, not a hosted deployment or binary release.

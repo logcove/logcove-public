@@ -18,7 +18,7 @@ The CLI depends only on public HTTP APIs. It does not read service databases, ca
 
 ## Responsibilities
 
-The CLI implements deterministic operations: authentication, pagination, file downloading, Chart definitions. The Skill guides the agent in selecting data, inspecting schemas, executing DuckDB, writing SQL, producing Vega-Lite, and checking results.
+The CLI implements deterministic operations: authentication, Project/Key management, pagination, file downloading, Chart definitions. The Skill guides the agent in setting up sources, selecting data, inspecting schemas, executing DuckDB, writing SQL, producing Vega-Lite, and checking results.
 
 There is no CLI query engine, `data describe` command, bundled DuckDB, LLM client, background daemon, or SDK/code generation layer. The agent uses an independently installed DuckDB environment. A future container can install the released CLI and the same Skill; noninteractive service identity is a later design.
 
@@ -30,9 +30,13 @@ There is no CLI query engine, `data describe` command, bundled DuckDB, LLM clien
 | `login [--no-browser]` | 1 | Authorize in the user's browser and save a signed Session |
 | `whoami` / `logout` | 1 | Inspect the current identity / revoke this CLI session |
 | `projects list` / `projects get <id>` | 1 | Discover readable active Projects / inspect Project metadata |
+| `projects create/update/archive/restore` | Management | Manage sources and their write-key bindings using existing public APIs |
+| `keys list/get/create/update/set-projects/revoke` | Management | Manage write keys; creation writes the secret to an explicit private file and returns its path |
 | `data pull <project-id> --from <date> --to <date> --output <dir> [--concurrency <1-8>]` | 2 | Download Parquet for inclusive UTC ingestion dates |
 | `charts list/get/create/update/delete` | 2 | Manage Chart definitions |
 | `skills install --agent codex\|claude [--force]` | 3 | Install the Skill embedded in the CLI into the selected agent's user directory, without API access |
+
+2026-09-10: Management commands are implemented in source, not released. `projects list --status` supports active (default), archived and all. Key output files use exclusive creation and owner permissions; no plaintext key is returned. The only new direct dependency is Windows-only `windows-sys` (already present transitively), used for native file ACLs. No backend change, billing command, ingestion client, query engine or new authentication flow is included. Desktop distribution can remain deferred while CLI workflows are completed.
 
 Normal command output is stable JSON on stdout. Login instructions, progress, and warnings go to stderr. Failures return a nonzero exit code. Tokens and signed download URLs are not normal output. SQL and Vega-Lite specifications are accepted through files in batch 2 to avoid shell escaping.
 

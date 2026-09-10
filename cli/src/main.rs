@@ -6,6 +6,7 @@ use logcove::{
     config,
     credentials::OsCredentials,
     error::Result,
+    management::{KeyCommand, ProjectCommand},
     skills::{self, SkillCommand},
 };
 use serde_json::{json, Value};
@@ -52,17 +53,22 @@ enum Command {
     Whoami,
     /// Revoke this CLI session and remove its saved credential
     Logout,
-    /// Discover data sources
+    /// Create and manage Project data sources
     Projects {
         #[command(subcommand)]
         command: ProjectCommand,
+    },
+    /// Manage write keys; created secrets are saved to a private local file
+    Keys {
+        #[command(subcommand)]
+        command: KeyCommand,
     },
     /// Download log datasets
     Data {
         #[command(subcommand)]
         command: DataCommand,
     },
-    /// Manage chart definitions and their latest results
+    /// Manage chart definitions for local computation
     Charts {
         #[command(subcommand)]
         command: ChartCommand,
@@ -90,14 +96,6 @@ enum DataCommand {
 enum ConfigCommand {
     Show,
     SetApiUrl { origin: String },
-}
-
-#[derive(Subcommand)]
-enum ProjectCommand {
-    /// List all active readable Projects, following every pagination cursor
-    List,
-    /// Show one owned Project (including archived metadata)
-    Get { id: String },
 }
 
 fn run(cli: Cli) -> Result<Value> {
@@ -160,12 +158,8 @@ fn run(cli: Cli) -> Result<Value> {
             api.logout()?;
             Ok(json!({"data": {"signed_out": true}}))
         }
-        Command::Projects {
-            command: ProjectCommand::List,
-        } => Ok(json!({"data": api.projects()?})),
-        Command::Projects {
-            command: ProjectCommand::Get { id },
-        } => Ok(json!({"data": api.project(&id)?})),
+        Command::Projects { command } => api.project_command(command),
+        Command::Keys { command } => api.key_command(command),
         Command::Data {
             command:
                 DataCommand::Pull {

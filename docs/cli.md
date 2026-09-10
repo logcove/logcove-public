@@ -4,7 +4,9 @@
 
 Download the prebuilt CLI for your platform from [v0.2.0](https://github.com/logcove/logcove-public/releases/tag/v0.2.0), extract it, and place `logcove` (`logcove.exe` on Windows) on PATH. Follow the [installation guide](../README.md#install) for macOS, Linux and Windows commands. Rust and a source checkout are not needed.
 
-The CLI implements authentication, Project discovery, Parquet downloads, and Chart operations. Each CLI package also includes the [analysis Skill](skills.md). CLI commands do not require DuckDB; install DuckDB separately for local analysis. Source builds and development commands are in the [development guide](development.md#local-development).
+The CLI implements authentication, Project and write-key management, Parquet downloads, and Chart operations. Each CLI package also includes the [analysis Skill](skills.md). CLI commands do not require DuckDB; install DuckDB separately for local analysis. Source builds and development commands are in the [development guide](development.md#local-development).
+
+Project mutations and `keys` commands below are implemented in the current source and are not in the published v0.2.0 binary. Check `logcove projects --help` and `logcove keys --help` before using them with an installed release.
 
 ## Install the bundled Skill (0.2.0+)
 
@@ -98,9 +100,61 @@ logcove projects list
 logcove projects get prj_00000000-0000-4000-8000-000000000001
 ```
 
-`list` follows every cursor from the readable Project API and emits one `{"data":[...]}` response. It returns active Projects owned by the current account, even if they have no write key. Empty pages do not terminate pagination when a next cursor exists. This is not a cross-page snapshot; concurrent Project changes may affect listing.
+The current CLI uses `/api/v1/projects`. `projects list` defaults to active Projects owned by the current account, including those without a write key. Use `--status archived` or `--status all` to include archived sources.
 
-`get` returns `{"data":{...}}` containing `id`, `name`, `description`, `status`, `data_prefix`, `created_at`, and `updated_at`. It may describe an owned archived Project; that does not make archived data readable. It does not expose Key bindings or ingestion control metadata. Names and descriptions provide analysis context; they do not substitute for reading the actual Parquet schema.
+`list` follows every pagination cursor and emits one `{"data":[...]}` response. Empty pages do not terminate pagination when a next cursor exists. This is not a cross-page snapshot; concurrent Project changes may affect listing.
+
+`get` returns `{"data":{...}}`. Both commands include `id`, `name`, `description`, `status`, `data_prefix`, `write_key_id`, `ingestion.desired_revision`, `created_at`, and `updated_at` for each Project. Archived Project metadata is readable, but its log data is not. Names and descriptions provide analysis context; they do not substitute for reading the actual Parquet schema.
+
+## Manage Projects and write keys
+
+All commands authenticate using the CLI's stored Session. Write keys authenticate Vector ingestion only; they cannot log in to the CLI or read data.
+
+```sh
+logcove projects create --name "API logs" --description "Backend request logs"
+logcove keys create --name "API collector" \
+  --project-id prj_00000000-0000-4000-8000-000000000001 \
+  --output /path/to/private/api-collector.key
+```
+
+Use the returned Project ID, and choose a new output file in an existing directory outside source control. A Project starts active with no write key. Creating a Key can bind it to one or more Projects by repeating `--project-id`; omitting it creates an unbound Key. A Project can have one write key, while a Key can serve multiple Projects.
+
+The Key creation command returns public metadata and an absolute `key_file` path:
+
+```json
+{"data":{"id":"key_00000000-0000-4000-8000-000000000001","name":"API collector","key_prefix":"lc_01234567","masked_key":"lc_01234567***","project_ids":["prj_00000000-0000-4000-8000-000000000001"],"revoked_at":null,"created_at":"2026-09-10T00:00:00Z","updated_at":"2026-09-10T00:00:00Z","key_file":"/path/to/private/api-collector.key"}}
+```
+
+The file contains the raw Key followed by a newline. The command never returns the plaintext Key or its hash on stdout/stderr. The destination is reserved before the API request and is never overwritten, including symlinks. Unix permissions are `0600`; Windows creates the file with a protected owner-only DACL. Windows alternate data streams are rejected. Keep this credential file private and pass its path to collector configuration code instead of copying its contents into an agent conversation. These files are separate from login Sessions, which remain in the OS credential store.
+
+| Command | Behavior |
+| --- | --- |
+| `projects update <id> --name <name> --description <text>` | Update the supplied metadata fields; omitted fields stay unchanged |
+| `projects update <id> --clear-description` | Clear the description |
+| `projects update <id> --write-key-id <key-id>` | Bind or replace the Project's write key using its resource ID |
+| `projects update <id> --clear-write-key` | Unbind the Project |
+| `projects archive <id>` / `projects restore <id>` | Disable/restore data access without deleting stored logs |
+| `keys list [--status active\|revoked\|all] [--project-id <id>]` | List masked metadata; defaults to all statuses and follows all pages |
+| `keys get <id>` | Read metadata and bindings; cannot recover the secret |
+| `keys update <id> --name <name>` | Rename without changing the secret |
+| `keys set-projects <id> --project-id <id> ...` | Replace the entire binding set with the supplied Projects |
+| `keys set-projects <id> --clear-projects` | Remove every binding without revoking the Key |
+| `keys revoke <id>` | Irreversibly revoke and unbind; repeating is safe; `keys delete` is an alias |
+
+Project metadata and write-key binding can be changed in one `projects update` request. `--clear-description` conflicts with `--description`; `--clear-write-key` conflicts with `--write-key-id`. `keys set-projects` requires either the complete list or explicit `--clear-projects`.
+
+Creating a Key or replacing its Project set refuses a Project already bound to another Key. Use `projects update --write-key-id` for an intentional replacement. Bindings change atomically in the API. There is no hard-delete Project command. Revoking a Key does not delete its local credential file or log data.
+
+Ingestion changes are asynchronous: `desired_revision` indicates the requested configuration, not proof that Vector has loaded it. The CLI does not poll for or claim immediate ingestion readiness.
+
+### Key creation failures
+
+- `KEY_FILE_ERROR`: the local destination could not be reserved; no creation request was sent.
+- API rejection: the reserved file is removed on a best-effort basis. The CLI does not retry creation or print the response body.
+- Lost/invalid response or server failure: creation may have occurred. Inspect `keys list` before retrying; a created secret cannot be retrieved again. Revoke an unusable Key by ID.
+- `KEY_FILE_WRITE_FAILED`: the API created the Key, but local writing/syncing failed. The error identifies the Key and the `keys revoke <id>` recovery command. No automatic retry or revocation is performed; partial-file cleanup is best effort.
+
+Success is returned only after the secret file has been written and synced. If stdout itself is interrupted afterward, the file may already contain the saved credential; inspect the chosen destination and Key metadata before retrying.
 
 ## Download Parquet
 

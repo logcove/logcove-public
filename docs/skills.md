@@ -8,7 +8,7 @@ The instruction-only Skill is in [`skills/logcove`](../skills/logcove/SKILL.md).
 - Configure your actual API origin and complete `logcove login`. See [CLI usage](cli.md) for browser authorization and OS credential-store requirements.
 - Provide a local DuckDB environment. Either the DuckDB CLI or Python package can be used; the Skill's examples use Python's `duckdb` package. A renderer is optional for local preview but necessary before claiming visual verification or image export.
 
-The Skill can guide login and source selection, but it does not supply a hosted Logcove deployment or create an account. A future container can reuse the instructions with suitable dependencies and its own authorized identity; noninteractive container authentication is not implemented here.
+The Skill can guide login, Project/Key management and source selection, but it does not supply a hosted Logcove deployment or create an account. The new management workflow requires the current source CLI and is not in published v0.2.0. Created write keys go to private local files; the Agent uses the returned path without exposing the secret. A future container can reuse the instructions with suitable dependencies and its own authorized identity; noninteractive container authentication is not implemented here.
 
 ## Install with the CLI (0.2.0+)
 
