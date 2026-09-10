@@ -86,9 +86,9 @@ For Claude Code:
 Keep the results local and generate a Vega-Lite chart without saving it.
 ```
 
-Replace the example day/source with actual available data. A task may span multiple Projects. The agent should clarify an ambiguous source or period when necessary, inspect the schema, use completed download manifests, calculate in DuckDB, and explain the coverage. Saving uploads the selected aggregate rows, SQL, spec, and metadata to Logcove; a local-only task should not create or overwrite a saved Chart.
+Replace the example day/source with actual available data. A task may span multiple Projects. The agent should clarify an ambiguous source or period when necessary, inspect the schema, use completed download manifests, calculate in DuckDB, and explain the coverage. Saving uploads the SQL, spec, and metadata to Logcove; aggregate rows stay local; a local-only task should not create or overwrite a saved Chart.
 
-The Skill supports creating Charts and updating existing ones, including replacing the latest result. It does not add scheduled refresh, alerts, a dashboard, or image-export commands to the CLI.
+The Skill supports creating Charts and updating existing ones, saving definitions while keeping computation results local. It does not add scheduled refresh, alerts, a dashboard, or image-export commands to the CLI.
 
 ## Repository structure
 

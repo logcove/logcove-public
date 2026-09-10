@@ -165,94 +165,40 @@ db.read_parquet(paths, union_by_name=True).create_view(manifest["project_id"])
 print(db.sql('DESCRIBE "' + manifest["project_id"] + '"').fetchall())
 ```
 
-Inspect fields and samples before writing SQL. Register one view per downloaded Project for cross-source analysis. This view naming is a client convention; the server does not automatically register or execute saved SQL. Chart `project_ids` are metadata tags and do not grant access. Do not save local absolute Parquet paths or signed URLs into Chart SQL.
+Inspect fields and samples before writing SQL. Register one view per downloaded Project for cross-source analysis. Chart `project_ids` declares all Project sources needed to initialize its tables/views. When recalculating, retrieve that list, authorize each read and register the sources in one DuckDB connection before executing SQL; the CLI/API do not initialize or execute it automatically. Dependencies do not grant access. Do not save local absolute Parquet paths or signed URLs into Chart SQL.
 
 ## Manage Charts
+
+The working tree uses definition-only Charts; these changes are pending release and are newer than published v0.2.0. Results stay local. The removed `--result-file` option and `charts result put` command are no longer supported.
 
 ```sh
 logcove charts list
 logcove charts list --project-id prj_00000000-0000-4000-8000-000000000001
 logcove charts get chart_00000000-0000-4000-8000-000000000001
+logcove charts create --name "Requests by service" \
+  --project-id prj_00000000-0000-4000-8000-000000000001 \
+  --sql-file query.sql --spec-file chart.vl.json
+logcove charts update chart_00000000-0000-4000-8000-000000000001 \
+  --revision 1 --sql-file query.sql \
+  --project-id prj_00000000-0000-4000-8000-000000000001
+logcove charts delete chart_00000000-0000-4000-8000-000000000001
 ```
 
-`list` follows all cursor pages and returns summaries, optionally filtered by a Project tag. `get` returns the definition, revision, result metadata, and current result data (or `null` when no result exists). It does not run SQL. The web application can render that stored result immediately.
+`list` follows all cursor pages and returns definition metadata. `get` also returns SQL and Vega-Lite spec; neither retrieves nor calculates results. Use the actual IDs and last observed revision. A stale revision fails without automatic retry. Omitted update fields are preserved; `--clear-description` explicitly clears a description.
 
-Prepare UTF-8 input files. SQL, spec, and result files may start with a UTF-8 BOM; the CLI strips that leading marker before parsing and enforcing content size limits. It preserves the rest of the text and does not modify the source file. UTF-16 input is unsupported. For data with a `service` field, `query.sql` could contain:
+Supply every source with repeated `--project-id`. Each SQL update requires the complete dependency list, or `--clear-projects` for a query with no Project sources. Creation without `--project-id` explicitly declares an empty list. The CLI/API do not infer sources from SQL. These dependencies do not grant data access.
+
+The application filters every Project view by system `_created_time` using the selected half-open receipt-time range. Chart SQL queries those views without parameters, for example:
 
 ```sql
 SELECT service, count(*) AS requests
 FROM "prj_00000000-0000-4000-8000-000000000001"
-GROUP BY service
-ORDER BY requests DESC;
+GROUP BY service;
 ```
 
-`chart.vl.json` uses the named `result` dataset:
+Use the actual time column and types. In Python, bind the selected UTC values with `db.execute(sql, {"start_time": start, "end_time": end})`. Register each source view in the same connection first. Saved SQL must not contain machine-specific paths, signed URLs or credentials. SQL/spec input files are UTF-8 (optional leading BOM), with limits of 64 KiB / 128 KiB; the total request limit is 256 KiB. The Vega-Lite spec uses only root `data: {"name":"result"}`, with no inline or external datasets. See the [Skill chart reference](../skills/logcove/references/charts.md) for a full spec and workflow.
 
-```json
-{
-  "$schema": "https://vega.github.io/schema/vega-lite/v6.json",
-  "data": {"name": "result"},
-  "mark": "bar",
-  "encoding": {
-    "x": {"field": "service", "type": "nominal"},
-    "y": {"field": "requests", "type": "quantitative"}
-  }
-}
-```
-
-The API also validates nested data-source positions. Inline datasets and external data URLs are unsupported. A result file is an explicit object containing exactly `computed_at` and `data`, not a bare row array:
-
-```json
-{"computed_at":"2026-09-03T00:00:00Z","data":[{"service":"api","requests":12}]}
-```
-
-Generate the timestamp at computation time in RFC 3339 format with a timezone. The CLI converts it to UTC and truncates sub-millisecond digits before upload, accepting Python's usual microsecond output without changing the source file. Invalid dates, missing timezones, and timestamps more than five minutes in the future are rejected. Upload JSON-compatible aggregate rows, with at most 10,000 object rows and 5 MiB of serialized data. SQL is limited to 64 KiB and the spec input file to 128 KiB. Avoid NaN/Infinity in results.
-
-For example, after registering the view in the Python setup:
-
-```python
-from datetime import datetime, timezone
-
-cursor = db.execute(Path("query.sql").read_text())
-columns = [column[0] for column in cursor.description]
-rows = [dict(zip(columns, row)) for row in cursor.fetchall()]
-result = {
-    "computed_at": datetime.now(timezone.utc).isoformat(timespec="milliseconds"),
-    "data": rows,
-}
-Path("result.json").write_text(
-    json.dumps(result, ensure_ascii=False, allow_nan=False, separators=(",", ":")),
-    encoding="utf-8",
-)
-```
-
-Cast timestamp, decimal, or other non-JSON result columns explicitly in SQL or convert them deliberately before serializing; the example query returns only strings and integer counts.
-
-```sh
-logcove charts create --name "Requests by service" \
-  --description "Requests in the selected ingestion dates" \
-  --project-id prj_00000000-0000-4000-8000-000000000001 \
-  --sql-file query.sql --spec-file chart.vl.json --result-file result.json
-```
-
-`--description`, `--project-id`, and `--result-file` are optional; repeat `--project-id` for multiple tags. Creating without a result stores the definition with an empty result. Creating with a result submits them together through the existing API.
-
-```sh
-logcove charts update chart_00000000-0000-4000-8000-000000000001 \
-  --revision 1 --name "Service request volume" --spec-file chart.vl.json
-```
-
-Use the revision last returned by `get`, `create`, or `update`. A stale revision fails with a conflict; the CLI does not silently fetch a newer revision or overwrite someone else's edit. Supply at least one changed field. Omitted fields are preserved; `--clear-description` and `--clear-projects` clear their respective metadata, while repeated `--project-id` values replace the complete tag list.
-
-Changing SQL text clears the previous result and related result metadata. Style/name/description/tag changes keep the result. Whitespace changes in SQL also count as a change. Fetch the latest definition, compute locally, then upload its result:
-
-```sh
-logcove charts result put chart_00000000-0000-4000-8000-000000000001 \
-  --file result.json
-logcove charts delete chart_00000000-0000-4000-8000-000000000001
-```
-
-Result replacement has no CLI revision parameter, result history, or background computation. Coordinate edits if several clients compute the same Chart: an upload is not tied to a client-supplied SQL revision. Delete removes the Chart and attempts to delete its current result object under the service's existing cleanup behavior; the CLI returns `{"data":{"id":"...","deleted":true}}`.
+The web/desktop Chart tab defaults to the last hour, with presets and a custom date/time picker. It downloads the selected UTC ingestion-date partitions, binds the time parameters and computes locally; this does not automatically include late arrivals from other dates. Successful results are cached in the application instance, and Refresh updates them. SQL/dependency changes use a new cache entry. The aggregate table and PNG/SVG exports use that local result. There is no cloud result upload, result history or background computation.
 
 ## Output and errors
 

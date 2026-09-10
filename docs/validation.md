@@ -1,5 +1,7 @@
 # CLI validation
 
+Current working-tree change: Charts now store definitions only. Result-upload/R2 checks below describe the older contract. The current implementation removes result commands, filters Project views by system `_created_time` before executing parameter-free SQL, and renders local calculations in the web/desktop app. Release and installed copies have not been updated.
+
 Date: 2026-09-08. This is local development verification, not a hosted deployment or binary release.
 
 ## Implemented

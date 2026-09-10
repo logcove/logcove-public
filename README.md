@@ -2,7 +2,7 @@
 
 Analyze your Logcove logs and create charts with Codex or Claude Code, using your own computer for DuckDB calculations.
 
-Download Parquet from your data sources, explore logs across Projects, and generate Vega-Lite charts. Keep an analysis local or save its chart and results to view in Logcove.
+Download Parquet from your data sources, explore logs across Projects, and generate Vega-Lite charts. Keep an analysis local or save its chart definition to calculate and view in Logcove.
 
 ## Install
 
@@ -101,7 +101,7 @@ The agent uses the CLI to download your data and DuckDB to calculate locally. Wh
 Create a chart from this analysis and save it to Logcove.
 ```
 
-Saving a chart uploads its SQL, Vega-Lite specification, aggregate results and metadata. You can also use the CLI directly; see the [download and Chart walkthrough](docs/cli.md#download-parquet).
+Saving a chart uploads its SQL, Vega-Lite specification and metadata. Results stay local; the web or desktop application calculates the selected time range on your device. Definition-only Charts require the upcoming CLI/API version; published v0.2.0 still uses the previous result contract. You can also use the CLI directly; see the [download and Chart walkthrough](docs/cli.md#download-parquet).
 
 ## Guides
 

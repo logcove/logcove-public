@@ -9,7 +9,7 @@ Complete the following workflow with a local coding agent:
 ```text
 Browser authorization -> Project discovery -> Parquet download
   -> local DuckDB analysis -> Vega-Lite specification
-  -> save Chart and result -> view in the web application
+  -> save Chart definition -> calculate/view in the web application
 ```
 
 This repository holds a single Rust CLI crate under `cli/`, an analysis Skill under `skills/logcove/`, public user documentation under `docs/`, and CI/release configuration under `.github/workflows/`. The license is Apache-2.0.
@@ -18,7 +18,7 @@ The CLI depends only on public HTTP APIs. It does not read service databases, ca
 
 ## Responsibilities
 
-The CLI implements deterministic operations: authentication, pagination, file downloading, Chart definitions, and result uploads. The Skill guides the agent in selecting data, inspecting schemas, executing DuckDB, writing SQL, producing Vega-Lite, and checking results.
+The CLI implements deterministic operations: authentication, pagination, file downloading, Chart definitions. The Skill guides the agent in selecting data, inspecting schemas, executing DuckDB, writing SQL, producing Vega-Lite, and checking results.
 
 There is no CLI query engine, `data describe` command, bundled DuckDB, LLM client, background daemon, or SDK/code generation layer. The agent uses an independently installed DuckDB environment. A future container can install the released CLI and the same Skill; noninteractive service identity is a later design.
 
@@ -32,10 +32,9 @@ There is no CLI query engine, `data describe` command, bundled DuckDB, LLM clien
 | `projects list` / `projects get <id>` | 1 | Discover readable active Projects / inspect Project metadata |
 | `data pull <project-id> --from <date> --to <date> --output <dir> [--concurrency <1-8>]` | 2 | Download Parquet for inclusive UTC ingestion dates |
 | `charts list/get/create/update/delete` | 2 | Manage Chart definitions |
-| `charts result put <id> --file <result.json>` | 2 | Replace the latest result |
 | `skills install --agent codex\|claude [--force]` | 3 | Install the Skill embedded in the CLI into the selected agent's user directory, without API access |
 
-Normal command output is stable JSON on stdout. Login instructions, progress, and warnings go to stderr. Failures return a nonzero exit code. Tokens and signed download URLs are not normal output. SQL, Vega-Lite specifications, and results are accepted through files in batch 2 to avoid shell escaping.
+Normal command output is stable JSON on stdout. Login instructions, progress, and warnings go to stderr. Failures return a nonzero exit code. Tokens and signed download URLs are not normal output. SQL and Vega-Lite specifications are accepted through files in batch 2 to avoid shell escaping.
 
 ## Batch 1: authentication and discovery
 
@@ -63,9 +62,9 @@ Dates select UTC ingestion partitions, not event timestamps. Apply event-time fi
 
 For portable SQL, the Skill registers a DuckDB view named by the full Project ID for each downloaded source. Saved SQL references those views, not machine-specific absolute paths. This is a client naming convention, not a new Chart field or implicit authorization rule. `project_ids` remain tag-like metadata.
 
-Chart creation may include its initial computed result. Definition updates respect the existing revision conflict contract. SQL text changes clear the previous result; style changes keep it. Results have no history/version record, thumbnail, query parameters, or scheduled refresh. A Vega-Lite spec uses `data: {"name":"result"}`. Result uploads contain `computed_at` and an array of at most 10,000 objects / 5 MiB; upload aggregated results, not all raw logs.
+Charts now store definitions only. Definition updates respect revision conflicts. Source SQL declares every Project dependency and has no parameters; the application filters every source view by system `_created_time` before running the calculation. Vega-Lite uses `data: {"name":"result"}`. Web/desktop calculates the selected time range locally and caches aggregate rows in memory; there is no result upload, history, thumbnail, query_params, or scheduled refresh. This working-tree contract is pending release.
 
-Batch 2 acceptance: real authorized Parquet downloads, known DuckDB aggregates, Chart creation/update/result replacement, and successful web rendering. The test API's R2 listing binding and download-signing target must point to the same real storage; locally emulated R2 cannot validate real downloads.
+Batch 2 acceptance: real authorized Parquet downloads, known DuckDB aggregates, Chart definition creation/update and local time-range calculation, and successful web rendering. The test API's R2 listing binding and download-signing target must point to the same real storage; locally emulated R2 cannot validate real downloads.
 
 ## Batch 3: Skill, followed by distribution
 
@@ -99,7 +98,7 @@ Before a stable public release, after the production API is deployed and verifie
 | `keyring` 3.6.3 | Same mature OS credential abstraction as the desktop, with an independent identity; plaintext persistence is not an automatic fallback |
 | `directories` | OS-specific configuration paths without hand-coded platform rules |
 | `open` | Open the existing browser with platform handling; manual links remain available |
-| `time` | Parse calendar dates and timezone-aware result/link timestamps instead of maintaining handwritten leap-year and timestamp parsing; one pinned dependency with Rust-version and timezone-format checks |
+| `time` | Parse calendar dates and timezone-aware link timestamps instead of maintaining handwritten leap-year and timestamp parsing; one pinned dependency with Rust-version and timezone-format checks |
 
 Commit the application lockfile. Main maintenance costs are dependency/security updates, OS credential service differences, and cross-platform binary validation. Do not add async task orchestration, terminal UI frameworks, or a cross-repository shared SDK for this scope.
 

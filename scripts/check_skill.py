@@ -48,8 +48,8 @@ class SkillTests(unittest.TestCase):
             folder.mkdir(parents=True)
             fixture = duckdb.connect()
             self.addCleanup(fixture.close)
-            fixture.sql("SELECT 'api' AS service FROM range(2)").write_parquet(str(folder / "one.parquet"))
-            fixture.sql("SELECT 'worker' AS service, 500 AS status").write_parquet(str(folder / "two.parquet"))
+            fixture.sql("SELECT 'api' AS service, TIMESTAMPTZ '2026-09-03 10:00:00+00' AS _created_time FROM range(2) UNION ALL SELECT 'before', TIMESTAMPTZ '2026-09-02 23:59:59+00' UNION ALL SELECT 'at-end', TIMESTAMPTZ '2026-09-04 00:00:00+00'").write_parquet(str(folder / "one.parquet"))
+            fixture.sql("SELECT 'worker' AS service, 500 AS status, TIMESTAMPTZ '2026-09-03 11:00:00+00' AS _created_time").write_parquet(str(folder / "two.parquet"))
             # A stale file outside the manifest must not affect the result.
             fixture.sql("SELECT 'stale' AS service FROM range(10)").write_parquet(str(folder / "stale.parquet"))
             manifest = {"project_id": PROJECT, "files": [{"path": "one.parquet"}, {"path": "two.parquet"}]}

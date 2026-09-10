@@ -12,41 +12,26 @@ use std::{
     collections::HashSet,
     path::{Path, PathBuf},
 };
-use time::{format_description::well_known::Rfc3339, OffsetDateTime, UtcOffset};
 
 const SQL_LIMIT: usize = 64 * 1024;
 const SPEC_LIMIT: usize = 128 * 1024;
-const RESULT_LIMIT: usize = 5 * 1024 * 1024;
-const REQUEST_LIMIT: usize = 6 * 1024 * 1024;
+const REQUEST_LIMIT: usize = 256 * 1024;
 
 #[derive(Subcommand)]
 pub enum ChartCommand {
-    /// List chart summaries, optionally filtered by a Project metadata tag
+    /// List chart summaries, optionally filtered by a Project source
     List {
         #[arg(long)]
         project_id: Option<String>,
     },
-    /// Get the definition and latest result
+    /// Get the saved definition
     Get { id: String },
-    /// Save a definition, optionally with its first computed result
+    /// Save a chart definition
     Create(CreateArgs),
     /// Update a definition using its last observed revision
     Update(UpdateArgs),
-    /// Delete a chart and its latest result
+    /// Delete a chart definition
     Delete { id: String },
-    Result {
-        #[command(subcommand)]
-        command: ResultCommand,
-    },
-}
-
-#[derive(Subcommand)]
-pub enum ResultCommand {
-    Put {
-        id: String,
-        #[arg(long)]
-        file: PathBuf,
-    },
 }
 
 #[derive(Args)]
@@ -55,15 +40,13 @@ pub struct CreateArgs {
     pub name: String,
     #[arg(long)]
     pub description: Option<String>,
+    /// Project source used by the SQL; repeat for every source
     #[arg(long = "project-id")]
     pub project_ids: Vec<String>,
     #[arg(long)]
     pub sql_file: PathBuf,
     #[arg(long)]
     pub spec_file: PathBuf,
-    /// JSON object containing computed_at and data
-    #[arg(long)]
-    pub result_file: Option<PathBuf>,
 }
 
 #[derive(Args)]
@@ -77,8 +60,10 @@ pub struct UpdateArgs {
     pub description: Option<String>,
     #[arg(long)]
     pub clear_description: bool,
+    /// Complete SQL source list; repeat for every Project
     #[arg(long = "project-id", conflicts_with = "clear_projects")]
     pub project_ids: Vec<String>,
+    /// Explicitly declare that the SQL has no Project sources
     #[arg(long)]
     pub clear_projects: bool,
     #[arg(long)]
@@ -91,7 +76,7 @@ fn invalid(message: &str) -> Error {
     Error::new("INVALID_INPUT", message)
 }
 
-fn validate_project_tags(ids: &[String]) -> Result<()> {
+fn validate_project_sources(ids: &[String]) -> Result<()> {
     let mut seen = HashSet::new();
     if ids.len() > 100
         || ids
@@ -99,7 +84,7 @@ fn validate_project_tags(ids: &[String]) -> Result<()> {
             .any(|id| !valid_project_id(id) || !seen.insert(id))
     {
         return Err(invalid(
-            "Project tags must be at most 100 unique Project IDs.",
+            "Project sources must be at most 100 unique Project IDs.",
         ));
     }
     Ok(())
@@ -139,59 +124,15 @@ fn spec(path: &Path) -> Result<Value> {
     Ok(value)
 }
 
-pub fn result_file(path: &Path) -> Result<Value> {
-    let mut value = files::json(path, REQUEST_LIMIT)?;
-    let object = value
-        .as_object()
-        .ok_or_else(|| invalid("Result must be an object containing computed_at and data."))?;
-    if object.len() != 2 {
-        return Err(invalid("Result accepts only computed_at and data."));
-    }
-    let computed = object
-        .get("computed_at")
-        .and_then(Value::as_str)
-        .ok_or_else(|| invalid("Result requires computed_at."))?;
-    let timestamp = OffsetDateTime::parse(computed, &Rfc3339)
-        .map_err(|_| invalid("computed_at must be an ISO timestamp with a timezone."))?;
-    if timestamp > OffsetDateTime::now_utc() + time::Duration::minutes(5) {
-        return Err(invalid(
-            "computed_at is more than five minutes in the future.",
-        ));
-    }
-    let rows = object
-        .get("data")
-        .and_then(Value::as_array)
-        .ok_or_else(|| invalid("Result data must be an array of JSON objects."))?;
-    if rows.len() > 10000 || rows.iter().any(|row| !row.is_object()) {
-        return Err(invalid(
-            "Result data must contain at most 10000 JSON objects.",
-        ));
-    }
-    if serde_json::to_vec(rows).unwrap().len() > RESULT_LIMIT {
-        return Err(invalid("Result data exceeds 5 MiB."));
-    }
-    // The API accepts millisecond precision; Python commonly emits microseconds.
-    value["computed_at"] = json!(timestamp
-        .to_offset(UtcOffset::UTC)
-        .replace_nanosecond(u32::from(timestamp.millisecond()) * 1_000_000)
-        .unwrap()
-        .format(&Rfc3339)
-        .map_err(|_| invalid("computed_at is outside the supported timestamp range."))?);
-    Ok(value)
-}
-
 pub fn create_body(args: &CreateArgs) -> Result<Value> {
-    validate_project_tags(&args.project_ids)?;
+    validate_project_sources(&args.project_ids)?;
     let mut body = json!({"name":name(&args.name)?, "sql":sql(&args.sql_file)?,
         "vega_lite_spec":spec(&args.spec_file)?, "project_ids":args.project_ids});
     if let Some(value) = &args.description {
         body["description"] = description(value)?;
     }
-    if let Some(file) = &args.result_file {
-        body["result"] = result_file(file)?;
-    }
     if serde_json::to_vec(&body).unwrap().len() > REQUEST_LIMIT {
-        return Err(invalid("Chart creation exceeds 6 MiB."));
+        return Err(invalid("Chart creation exceeds 256 KiB."));
     }
     Ok(body)
 }
@@ -214,10 +155,15 @@ pub fn update_body(args: &UpdateArgs) -> Result<Value> {
         body.insert("description".into(), Value::Null);
     }
     if !args.project_ids.is_empty() || args.clear_projects {
-        validate_project_tags(&args.project_ids)?;
+        validate_project_sources(&args.project_ids)?;
         body.insert("project_ids".into(), json!(args.project_ids));
     }
     if let Some(path) = &args.sql_file {
+        if args.project_ids.is_empty() && !args.clear_projects {
+            return Err(invalid(
+                "With --sql-file, supply every --project-id or use --clear-projects for a query without Project sources.",
+            ));
+        }
         body.insert("sql".into(), sql(path)?);
     }
     if let Some(path) = &args.spec_file {
@@ -236,7 +182,9 @@ pub fn update_body(args: &UpdateArgs) -> Result<Value> {
 impl<S: CredentialStore> Api<S> {
     pub fn charts(&mut self, project: Option<&str>) -> Result<Vec<Value>> {
         if project.is_some_and(|id| !valid_project_id(id)) {
-            return Err(invalid("Expected a Project ID for the chart tag filter."));
+            return Err(invalid(
+                "Expected a Project ID for the chart source filter.",
+            ));
         }
         let mut result = Vec::new();
         let mut cursor = None;
@@ -306,17 +254,6 @@ impl<S: CredentialStore> Api<S> {
         Ok(())
     }
 
-    pub fn put_chart_result(&mut self, id: &str, path: &Path) -> Result<Value> {
-        self.authenticated(
-            Method::PUT,
-            &format!("{}/result", chart_path(id)?),
-            &[],
-            Some(&result_file(path)?),
-        )?
-        .decode::<Data<Value>>()
-        .map(|r| r.data)
-    }
-
     pub fn chart_command(&mut self, command: ChartCommand) -> Result<Value> {
         let data = match command {
             ChartCommand::List { project_id } => json!(self.charts(project_id.as_deref())?),
@@ -327,9 +264,6 @@ impl<S: CredentialStore> Api<S> {
                 self.delete_chart(&id)?;
                 json!({"id": id, "deleted":true})
             }
-            ChartCommand::Result {
-                command: ResultCommand::Put { id, file },
-            } => self.put_chart_result(&id, &file)?,
         };
         Ok(json!({"data": data}))
     }

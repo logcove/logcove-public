@@ -1,10 +1,20 @@
 # Vega-Lite and saved Charts
 
-Use this reference when generating chart artifacts or saving them to Logcove. Charts are user-level resources; Project IDs are optional source tags, not ownership or access boundaries.
+Charts store definitions only: name, description, Project dependencies, SQL, and Vega-Lite spec. Calculation results stay local. There is no result upload endpoint, result history, thumbnail, or scheduled computation.
 
-## Specification and result
+## Query and local verification
 
-Use a Vega-Lite spec with root `data` exactly `{"name":"result"}`. For example, for a computed result containing `service` and `requests`:
+Use `project_ids` as the complete set of Project sources required by the SQL. Register each as a DuckDB view using its full Project ID. The list does not grant access; authorize reads through the CLI.
+
+The application registers each Project as a view filtered by system `_created_time` in the selected half-open range `[start, end)`, normalized to TIMESTAMPTZ. Saved SQL only queries those views and computes the metric; do not include `$start_time`, `$end_time`, or other parameters. Cross-source queries see the same selected receipt-time range for every source. Do not hardcode the current window. Existing `$start_time` / `$end_time` bindings remain compatible, but their predicates are additional conditions inside the filtered views. When updating a legacy definition, explicitly remove obsolete selection predicates; the application does not rewrite SQL. Business event-time fields remain ordinary data and may differ from receipt time. See [duckdb.md](duckdb.md) to reproduce the filtered views locally.
+
+The application selects files by UTC ingestion dates, then executes the SQL event-time predicates. It does not automatically discover late-arriving events stored in other ingestion partitions. A short time range can still require downloading a whole day's files. Missing source files provide no schema: report this instead of fabricating a zero count. Existing Charts may have incomplete dependencies or fixed dates; reconcile those definitions before recalculating.
+
+When the task requires analysis, compute locally to verify the query and spec, but do not upload results. For metadata-only edits, retrieve and update the definition without downloading or recalculating data.
+
+## Vega-Lite specification
+
+Use root `data` exactly `{"name":"result"}`:
 
 ```json
 {
@@ -22,54 +32,35 @@ Use a Vega-Lite spec with root `data` exactly `{"name":"result"}`. For example, 
 }
 ```
 
-Adapt encodings to the actual result fields/types. Prefer readable units, explicit temporal granularity, and labels in the user's language. Child layers may inherit the root dataset. Do not embed inline values, top-level datasets, external URLs, or unrelated named datasets in a saved spec; a local preview should inject rows into `result` at render time instead of changing the saved data declaration.
+Adapt fields and encodings to the actual aggregate output. Do not embed inline values, top-level datasets, external URLs, or other named datasets in the saved spec. A local renderer injects the computed rows into `result`; the webpage/desktop app does this after its own local calculation. SQL/spec are limited to 64 KiB / 128 KiB. The application displays at most 10,000 aggregate rows and 5 MiB of result JSON; reduce the SQL output rather than silently truncating it. Cast identifiers exceeding JavaScript's safe integer range to VARCHAR.
 
-`result.json` has exactly two fields:
+Use an available Vega-Lite renderer to check the chart when appropriate; JSON parsing or successful definition storage alone does not prove rendering. The web/desktop app exports PNG/SVG after calculation. The CLI has no image export command.
 
-```json
-{"computed_at":"2026-09-03T00:00:00Z","data":[{"service":"api","requests":12}]}
-```
+## Save and update definitions
 
-Generate `computed_at` at computation time; do not reuse the sample timestamp. The CLI normalizes RFC 3339 timestamps to UTC milliseconds. The limits are 64 KiB for SQL, 128 KiB for the spec input file, and 10,000 object rows / 5 MiB of result data. UTF-8 files may have a leading BOM. Follow [duckdb.md](duckdb.md) for result serialization.
-
-Check that referenced fields exist and the aggregate answers the question. Use an available compatible Vega-Lite/Vega renderer or the web UI to check a rendered chart when possible. JSON parsing or successful API storage alone does not prove rendering works; report that limit if no renderer is available. Export images through an available renderer; the CLI does not have a chart-image export command.
-
-## Save a new Chart
-
-When saving is within the user's requested scope, submit the definition and initial result together:
+When saving is within the user's requested scope:
 
 ```sh
 logcove charts create --name "Requests by service" \
-  --description "Requests in the selected ingestion dates" \
+  --description "Requests grouped by service within the selected time window" \
   --project-id prj_00000000-0000-4000-8000-000000000001 \
-  --sql-file query.sql --spec-file chart.vl.json --result-file result.json
+  --sql-file query.sql --spec-file chart.vl.json
 logcove charts get chart_00000000-0000-4000-8000-000000000001
 ```
 
-Use the ID returned by `create` for `get`; all IDs above are examples. Repeat `--project-id` for multiple source tags. Description, tags, and initial result are optional, but omitting a result does not trigger calculation. Record the meaningful date range and timezone in the description and/or SQL; there is no `query_params` field.
+Use the actual returned Chart ID for `get`. Supply every Project with repeated `--project-id`; only omit it when the SQL has no Project sources. The CLI explicitly sends an empty dependency list in that case. Creation stores no result and starts no computation on the server.
 
-Verify the saved SQL/spec, result rows, and timestamps. Return the ID and, if known, the actual web-origin URL `/charts/<id>`. Do not derive the web origin by stripping `api` from a hostname.
-
-## Update an existing Chart
+For an existing Chart, read its definition and revision first:
 
 ```sh
-logcove charts get chart_00000000-0000-4000-8000-000000000001
 logcove charts update chart_00000000-0000-4000-8000-000000000001 \
-  --revision 1 --name "Service request volume" --spec-file chart.vl.json
+  --revision 1 --sql-file query.sql \
+  --project-id prj_00000000-0000-4000-8000-000000000001
 ```
 
-Use the current revision returned by the CLI, not the example `1`. Supply only intended changes. Omitted fields are preserved. `--clear-description` and `--clear-projects` explicitly clear metadata; repeated `--project-id` values replace the whole tag set. `--sql-file` changes the saved query.
+Use the observed revision, not the sample `1`. Every SQL update also requires the complete Project list, or `--clear-projects` for SQL without Project sources. Omitted fields are preserved. `--clear-description` clears the description. A revision conflict requires a fresh read and reconciliation; do not blindly overwrite.
 
-Changing any SQL text, including whitespace, clears the saved result and its metadata. Name, style, description, and tag changes retain it. For a query change, compute using the intended SQL, update the definition with its observed revision, then upload the corresponding result:
-
-```sh
-logcove charts result put chart_00000000-0000-4000-8000-000000000001 --file result.json
-logcove charts get chart_00000000-0000-4000-8000-000000000001
-```
-
-A definition conflict needs a fresh read and reconciliation; do not automatically retry with the newest revision. Result replacement has no revision argument or atomic SQL-match check. Before uploading a result to an existing Chart, re-read its current SQL and compare with what was executed. If it changed, stop that upload and reconcile. This catches observed changes but cannot prevent a simultaneous edit after the check; report conflicting activity if encountered rather than claiming atomic protection.
-
-There is only a latest result: no result history, thumbnail, or scheduled computation. `charts get` reads stored data and never executes SQL. Only delete a Chart when deletion is part of the user's request:
+Verify saved SQL, dependencies and spec by reading them back. Return the ID and the actual known web URL `/charts/<id>`; do not derive a web origin by stripping `api` from a hostname. Opening a Chart calculates its selected time range locally when there is no cached result. The default is the last hour, so historical data may require choosing a different range. Cache survives navigation in the same application instance; Refresh recomputes it. Deletion removes only the definition and requires user-requested deletion scope:
 
 ```sh
 logcove charts delete chart_00000000-0000-4000-8000-000000000001
