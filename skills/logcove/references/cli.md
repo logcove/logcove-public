@@ -26,7 +26,7 @@ logcove data pull prj_00000000-0000-4000-8000-000000000001 \
   --from 2026-09-01 --to 2026-09-02 --output ./analysis/logs
 ```
 
-Replace example IDs and dates with discovered values and the selected range. `projects list` follows all pages and defaults to active Projects; `--status archived` or `--status all` includes archived metadata. `projects get` may describe an archived Project, which does not make its data downloadable. Management output includes `id`, `name`, `description`, `status`, `data_prefix`, `write_key_id`, `ingestion.desired_revision`, and timestamps.
+Replace example IDs and dates with discovered values and the selected range. `projects list` follows all pages and defaults to active Projects; `--status archived` or `--status all` includes archived metadata. `projects get` may describe an archived Project, which does not make its data downloadable. Management output includes `id`, `name`, `description`, `status`, `ingestion_protocol`, `data_prefix`, `write_key_id`, `ingestion.desired_revision`, and timestamps.
 
 `data pull` handles pagination, signing, retries for expired access, concurrency, object validation, and manifest publication. A completed response is:
 
@@ -39,6 +39,14 @@ Each invocation creates a new run directory. Its manifest records `api_url`, `pr
 For more than 93 ingestion days, use separate bounded pulls only for the requested coverage and data still available from retention. Do not combine overlapping pulls of the same objects as extra events; see [duckdb.md](duckdb.md).
 
 ## Manage Projects and write keys
+
+Each Project has one immutable `ingestion_protocol`: `http_json` (the default) or `otlp_http` (OTLP/HTTP Protobuf Logs). Choose it at creation:
+
+```sh
+logcove projects create --name "OTel logs" --ingestion-protocol otlp_http
+```
+
+Use `--ingestion-protocol http_json` for ordinary JSON. `projects update` does not accept the protocol; create a different Project to change formats. The same write Key may bind Projects of different protocols, but each request must use the matching Project and protocol endpoint. This flag requires the updated API; these source changes are not yet released. A created OTLP Project alone does not prove its collector endpoint is deployed. Use the endpoint supplied by that environment, never guess it from the API host.
 
 These commands require the current management-capable CLI; the published v0.2.0 binary lacks them. Check `projects --help` and `keys --help`. They use the saved login Session and do not need DuckDB or data downloads.
 

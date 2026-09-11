@@ -6,6 +6,7 @@ use logcove::{
         CreateKey, KeyCommand, KeyStatus, ProjectCommand, ProjectStatus, SetKeyProjects,
         UpdateProject,
     },
+    models::IngestionProtocol,
 };
 use serde_json::{json, Value};
 use std::{fs, path::PathBuf, process::Command};
@@ -19,7 +20,7 @@ fn secret() -> String {
     format!("lc_{}", "a".repeat(64))
 }
 fn project() -> Value {
-    json!({"id":PROJECT,"name":"Logs","description":null,"status":"active","data_prefix":format!("logs/project={PROJECT}/"),"write_key_id":null,"ingestion":{"desired_revision":1},"created_at":"2026-09-10T00:00:00Z","updated_at":"2026-09-10T00:00:00Z"})
+    json!({"id":PROJECT,"name":"Logs","description":null,"status":"active","ingestion_protocol":"http_json","data_prefix":format!("logs/project={PROJECT}/"),"write_key_id":null,"ingestion":{"desired_revision":1},"created_at":"2026-09-10T00:00:00Z","updated_at":"2026-09-10T00:00:00Z"})
 }
 fn key() -> Value {
     json!({"id":KEY,"name":"Collector","key_prefix":"lc_aaaaaaaa","masked_key":"lc_aaaaaaaa***","project_ids":[PROJECT],"revoked_at":null,"created_at":"2026-09-10T00:00:00Z","updated_at":"2026-09-10T00:00:00Z"})
@@ -64,7 +65,7 @@ fn project_lifecycle_preserves_binding_and_ingestion_metadata() {
             201,
             json!({"data":project()}),
         )
-        .body(json!({"name":"Logs","description":"Backend"})),
+        .body(json!({"name":"Logs","description":"Backend","ingestion_protocol":"http_json"})),
         step("GET", &route, project()),
         step("PATCH", &route, bound.clone())
             .body(json!({"name":"Renamed","description":null,"write_key_id":KEY})),
@@ -75,6 +76,7 @@ fn project_lifecycle_preserves_binding_and_ingestion_metadata() {
     let mut api = Api::new(server.origin.clone(), MemoryStore::with_token(TOKEN)).unwrap();
     assert_eq!(
         api.project_command(ProjectCommand::Create {
+            ingestion_protocol: IngestionProtocol::HttpJson,
             name: " Logs ".into(),
             description: Some("Backend".into())
         })
@@ -111,6 +113,38 @@ fn project_lifecycle_preserves_binding_and_ingestion_metadata() {
             .is_null()
     );
     server.finish();
+}
+
+#[test]
+fn otlp_protocol_is_sent_on_creation_and_preserved_in_output() {
+    let mut otlp = project();
+    otlp["ingestion_protocol"] = json!("otlp_http");
+    let server = Server::start(vec![
+        Step::json(
+            "POST",
+            "/api/v1/projects",
+            Some(TOKEN),
+            201,
+            json!({"data":otlp}),
+        )
+        .body(json!({"name":"OTel", "ingestion_protocol":"otlp_http"})),
+        step("GET", &format!("/api/v1/projects/{PROJECT}"), otlp.clone()),
+    ]);
+    let mut api = Api::new(server.origin.clone(), MemoryStore::with_token(TOKEN)).unwrap();
+    assert_eq!(
+        api.project_command(ProjectCommand::Create {
+            name: "OTel".into(),
+            description: None,
+            ingestion_protocol: IngestionProtocol::OtlpHttp,
+        })
+        .unwrap()["data"],
+        otlp
+    );
+    assert_eq!(
+        api.project_command(ProjectCommand::Get { id: PROJECT.into() })
+            .unwrap()["data"],
+        otlp
+    );
 }
 
 #[test]
@@ -469,6 +503,7 @@ fn invalid_local_inputs_never_send_a_request_or_overwrite_files() {
     }
     assert_eq!(
         api.project_command(ProjectCommand::Create {
+            ingestion_protocol: IngestionProtocol::HttpJson,
             name: " ".into(),
             description: None
         })
@@ -478,6 +513,7 @@ fn invalid_local_inputs_never_send_a_request_or_overwrite_files() {
     );
     assert_eq!(
         api.project_command(ProjectCommand::Create {
+            ingestion_protocol: IngestionProtocol::HttpJson,
             name: "x".into(),
             description: Some("x".repeat(2001))
         })
@@ -545,6 +581,21 @@ fn cli_requires_an_output_file_and_explicit_binding_changes() {
             "--clear-description",
         ],
         vec!["projects", "list", "--status", "revoked"],
+        vec![
+            "projects",
+            "create",
+            "--name",
+            "Logs",
+            "--ingestion-protocol",
+            "grpc",
+        ],
+        vec![
+            "projects",
+            "update",
+            PROJECT,
+            "--ingestion-protocol",
+            "otlp_http",
+        ],
     ] {
         let output = Command::new(env!("CARGO_BIN_EXE_logcove"))
             .env_remove("LOGCOVE_API_URL")

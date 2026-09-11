@@ -20,6 +20,8 @@ Choose the workflow needed for the request. For viewing an existing Chart or cha
 
 For setup or management requests, use the Project and Key commands in [references/cli.md](references/cli.md#manage-projects-and-write-keys). Check the installed command's help: published older binaries do not have these operations. Follow the user's authorized resource scope; ordinary analysis does not require creating or modifying keys.
 
+Choose `ingestion_protocol` when creating a Project: `http_json` for ordinary JSON or `otlp_http` for OTLP/HTTP Protobuf Logs. It cannot be changed later. Check that the selected environment provides that collector endpoint before sending logs.
+
 Key creation requires `--output` pointing to a new private file. Return `data.key_file` and masked metadata; do not read the file into the conversation, print its contents, or place the secret in command arguments. When configuring an authorized collector, use code that reads the file internally without logging its contents. Write keys are for ingestion only; reads and management use the existing login Session. Inspect current bindings before replacing them, and do not automatically retry uncertain creation failures.
 
 ## Choose and download data

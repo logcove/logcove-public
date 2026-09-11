@@ -96,3 +96,7 @@ Path("result.json").write_text(
 This example intentionally expects JSON-compatible query output. Cast or convert date/time, decimal, binary, and other non-JSON values according to their meaning before serialization. Give temporal values an explicit timezone where relevant. Do not use a blanket `default=str`, silently convert NaN/Infinity to strings, or discard rows to pass limits. JavaScript chart rendering cannot represent integers above 2^53-1 exactly; preserve large identifiers as strings.
 
 An empty result array is valid when an actual query over known, available data produces no matching rows. That differs from an empty download manifest. Keep raw Parquet and investigation samples local; save only the Chart definition to the service.
+
+## OTLP Projects
+
+`ingestion_protocol` identifies how logs arrived, not a complete Parquet schema. Inspect the actual columns. The current OTLP mapping stores `resource`, `scope`, and `attributes` as JSON strings; a structured `body` is JSON-encoded, while a text body remains text. Use DuckDB JSON functions for nested attributes. `_created_time` remains receipt time; `event_time` is the OTLP event timestamp (Vector falls back to observed time when it is absent).

@@ -104,9 +104,17 @@ The current CLI uses `/api/v1/projects`. `projects list` defaults to active Proj
 
 `list` follows every pagination cursor and emits one `{"data":[...]}` response. Empty pages do not terminate pagination when a next cursor exists. This is not a cross-page snapshot; concurrent Project changes may affect listing.
 
-`get` returns `{"data":{...}}`. Both commands include `id`, `name`, `description`, `status`, `data_prefix`, `write_key_id`, `ingestion.desired_revision`, `created_at`, and `updated_at` for each Project. Archived Project metadata is readable, but its log data is not. Names and descriptions provide analysis context; they do not substitute for reading the actual Parquet schema.
+`get` returns `{"data":{...}}`. Both commands include `id`, `name`, `description`, `status`, `ingestion_protocol`, `data_prefix`, `write_key_id`, `ingestion.desired_revision`, `created_at`, and `updated_at` for each Project. Archived Project metadata is readable, but its log data is not. Names and descriptions provide analysis context; they do not substitute for reading the actual Parquet schema.
 
 ## Manage Projects and write keys
+
+Each Project has one immutable `ingestion_protocol`: `http_json` (the default) or `otlp_http` (OTLP/HTTP Protobuf Logs). Choose it at creation:
+
+```sh
+logcove projects create --name "OTel logs" --ingestion-protocol otlp_http
+```
+
+Use `--ingestion-protocol http_json` for ordinary JSON. `projects update` does not accept the protocol; create a different Project to change formats. The same write Key may bind Projects of different protocols, but each request must use the matching Project and protocol endpoint. This flag requires the updated API; these source changes are not yet released. A created OTLP Project alone does not prove its collector endpoint is deployed. Use the endpoint supplied by that environment, never guess it from the API host.
 
 All commands authenticate using the CLI's stored Session. Write keys authenticate Vector ingestion only; they cannot log in to the CLI or read data.
 

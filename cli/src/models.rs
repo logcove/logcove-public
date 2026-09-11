@@ -1,4 +1,14 @@
+use clap::ValueEnum;
 use serde::{Deserialize, Serialize};
+
+#[derive(Clone, Copy, Default, Deserialize, Serialize, ValueEnum)]
+#[serde(rename_all = "snake_case")]
+#[value(rename_all = "snake_case")]
+pub enum IngestionProtocol {
+    #[default]
+    HttpJson,
+    OtlpHttp,
+}
 
 #[derive(Deserialize, Serialize)]
 pub struct Data<T> {
@@ -22,6 +32,9 @@ pub struct Project {
     pub name: String,
     pub description: Option<String>,
     pub status: String,
+    // Older API responses predate OTLP support and describe JSON-only Projects.
+    #[serde(default)]
+    pub ingestion_protocol: IngestionProtocol,
     pub data_prefix: String,
     pub created_at: String,
     pub updated_at: String,

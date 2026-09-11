@@ -2,7 +2,7 @@ use crate::{
     client::{valid_id, Api},
     credentials::CredentialStore,
     error::{Error, Result},
-    models::{Data, Page, Project},
+    models::{Data, IngestionProtocol, Page, Project},
     secret_file::SecretFile,
 };
 use clap::{Args, Subcommand, ValueEnum};
@@ -41,6 +41,9 @@ pub enum ProjectCommand {
         name: String,
         #[arg(long)]
         description: Option<String>,
+        /// Immutable ingestion format for this Project
+        #[arg(long, value_enum, default_value = "http_json")]
+        ingestion_protocol: IngestionProtocol,
     },
     /// Edit metadata or atomically replace/clear the write-key binding
     Update(UpdateProject),
@@ -251,8 +254,10 @@ impl<S: CredentialStore> Api<S> {
             ProjectCommand::Create {
                 name: value,
                 description: desc,
+                ingestion_protocol,
             } => {
-                let mut body = json!({"name": name(&value)?});
+                let mut body =
+                    json!({"name": name(&value)?, "ingestion_protocol": ingestion_protocol});
                 if let Some(desc) = desc {
                     body["description"] = description(&desc)?;
                 }
