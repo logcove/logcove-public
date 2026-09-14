@@ -13,7 +13,7 @@ logcove login
 
 If the deployment is not configured, get its actual API origin from the user or existing project settings, then use `logcove config set-api-url <origin>`. `--api-url <origin>` overrides the target for one invocation; use it consistently throughout the task. Precedence is flag, `LOGCOVE_API_URL`, saved configuration.
 
-Login uses a signed Bearer Session, not a JWT or Vector write key. The CLI stores it in the OS credential service, independently of the desktop app. Do not read the keychain, request a token from the user, put tokens in shell commands, or build Authorization headers.
+Login uses a signed Bearer Session, not a JWT or Vector write key. The CLI stores it in the OS credential service, independently of the desktop app. Do not read the keychain, request a Session token from the user, put Session tokens in shell commands, or build Session Authorization headers. Log ingestion uses a separate write-key header as described in [ingestion.md](ingestion.md).
 
 `logcove login --no-browser` prints a link and waits for browser approval. A localhost link requires the associated local web application. An expired or denied request needs a new login attempt, not repeated approval of the old link. Do not log out or change accounts merely to diagnose a download error.
 

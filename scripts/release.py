@@ -25,6 +25,7 @@ TARGETS = (
 SKILL_FILES = (
     "SKILL.md",
     "references/cli.md",
+    "references/ingestion.md",
     "references/duckdb.md",
     "references/charts.md",
 )

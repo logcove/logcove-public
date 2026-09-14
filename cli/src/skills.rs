@@ -12,6 +12,10 @@ pub const FILES: &[(&str, &[u8])] = &[
         include_bytes!("../../skills/logcove/references/cli.md"),
     ),
     (
+        "references/ingestion.md",
+        include_bytes!("../../skills/logcove/references/ingestion.md"),
+    ),
+    (
         "references/duckdb.md",
         include_bytes!("../../skills/logcove/references/duckdb.md"),
     ),

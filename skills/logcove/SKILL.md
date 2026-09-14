@@ -1,11 +1,11 @@
 ---
 name: logcove
-description: Manage Logcove Projects and write keys, analyze logs, and create charts using the Logcove CLI, local DuckDB, and Vega-Lite. Use for setting up log sources, downloading Parquet, investigating logs across sources, or saving Logcove Charts.
+description: Manage Logcove Projects and write keys, connect HTTP JSON or OpenTelemetry log sources, analyze logs, and create charts using the Logcove CLI, local DuckDB, and Vega-Lite. Use for setting up log ingestion, downloading Parquet, investigating logs across sources, or saving Logcove Charts.
 ---
 
 # Logcove analysis
 
-Use `logcove` for service operations and a locally available DuckDB environment for computation. This Skill is shared by Codex and Claude Code; it does not require an MCP server or a hosted agent.
+Use `logcove` for management and data reads, the matching collector endpoint for log ingestion, and a locally available DuckDB environment for computation. This Skill is shared by Codex and Claude Code; it does not require an MCP server or a hosted agent.
 
 ## Establish the task and environment
 
@@ -21,6 +21,8 @@ Choose the workflow needed for the request. For viewing an existing Chart or cha
 For setup or management requests, use the Project and Key commands in [references/cli.md](references/cli.md#manage-projects-and-write-keys). Check the installed command's help: published older binaries do not have these operations. Follow the user's authorized resource scope; ordinary analysis does not require creating or modifying keys.
 
 Choose `ingestion_protocol` when creating a Project: `http_json` for ordinary JSON or `otlp_http` for OTLP/HTTP Protobuf Logs. It cannot be changed later. Check that the selected environment provides that collector endpoint before sending logs.
+
+For connecting an application, generating integration examples, or verifying ingestion, read [references/ingestion.md](references/ingestion.md). It covers protocol-specific senders, Project/key headers, private key-file loading, SDK flushing, and checking uploaded Parquet. An accepted request alone does not prove the log is downloadable.
 
 Key creation requires `--output` pointing to a new private file. Return `data.key_file` and masked metadata; do not read the file into the conversation, print its contents, or place the secret in command arguments. When configuring an authorized collector, use code that reads the file internally without logging its contents. Write keys are for ingestion only; reads and management use the existing login Session. Inspect current bindings before replacing them, and do not automatically retry uncertain creation failures.
 
