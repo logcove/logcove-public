@@ -49,6 +49,224 @@ fn download(index: usize) -> Step {
     step
 }
 
+fn cache_manifest(
+    folder: &Directory,
+    origin: &reqwest::Url,
+    files: Vec<Value>,
+) -> std::path::PathBuf {
+    let path = folder.0.join("manifest.json");
+    std::fs::write(
+        &path,
+        serde_json::to_vec(&json!({
+            "schema_version":1,"api_url":origin.origin().ascii_serialization(),"project_id":PROJECT,
+            "start_date":"2026-09-08","end_date":"2026-09-08","completed_at":"2026-09-08T12:00:00Z",
+            "files":files,
+        }))
+        .unwrap(),
+    )
+    .unwrap();
+    path
+}
+
+fn cached_object(index: usize) -> Value {
+    let mut file = object(index);
+    file["path"] = json!(format!("{index}.parquet"));
+    file
+}
+
+#[test]
+fn reuse_downloads_only_missing_files_and_keeps_complete_portable_manifest() {
+    let storage = Server::start(vec![download(1)]);
+    let server = Server::start(vec![
+        list(vec![object(0), object(1), object(2)], None, None),
+        links(&[1], &storage.origin),
+    ]);
+    let cache = Directory::default();
+    for index in [0, 2] {
+        std::fs::write(cache.0.join(format!("{index}.parquet")), BYTES).unwrap();
+    }
+    let manifest = cache_manifest(
+        &cache,
+        &server.origin,
+        vec![cached_object(0), cached_object(2)],
+    );
+    let mut api = Api::new(server.origin.clone(), MemoryStore::with_token(TOKEN)).unwrap();
+    let output = Directory::default();
+    let report = api
+        .pull_with_reuse(
+            PROJECT,
+            ("2026-09-08", "2026-09-08"),
+            &output.0,
+            4,
+            &[manifest],
+        )
+        .unwrap();
+    assert_eq!(
+        (
+            report.file_count,
+            report.downloaded_file_count,
+            report.reused_file_count
+        ),
+        (3, 1, 2)
+    );
+    assert_eq!(report.total_bytes, 3 * BYTES.len() as u64);
+    drop(cache);
+    let manifest: Value =
+        serde_json::from_slice(&std::fs::read(&report.manifest_path).unwrap()).unwrap();
+    for (index, file) in manifest["files"].as_array().unwrap().iter().enumerate() {
+        assert_eq!(file["key"], key(index));
+        let path = report
+            .manifest_path
+            .parent()
+            .unwrap()
+            .join(file["path"].as_str().unwrap());
+        assert_eq!(std::fs::read_to_string(path).unwrap(), BYTES);
+    }
+}
+
+#[test]
+fn reuse_all_files_still_lists_but_never_signs_or_downloads() {
+    let server = Server::start(vec![list(vec![object(0)], None, None)]);
+    let cache = Directory::default();
+    std::fs::write(cache.0.join("0.parquet"), BYTES).unwrap();
+    let manifest = cache_manifest(&cache, &server.origin, vec![cached_object(0)]);
+    let output = Directory::default();
+    let mut api = Api::new(server.origin.clone(), MemoryStore::with_token(TOKEN)).unwrap();
+    let report = api
+        .pull_with_reuse(
+            PROJECT,
+            ("2026-09-08", "2026-09-08"),
+            &output.0,
+            4,
+            &[manifest.clone(), manifest],
+        )
+        .unwrap();
+    assert_eq!(
+        (
+            report.file_count,
+            report.downloaded_file_count,
+            report.reused_file_count
+        ),
+        (1, 0, 1)
+    );
+}
+
+#[test]
+fn reuse_redownloads_changed_missing_truncated_and_invalid_cached_files() {
+    for problem in [
+        "etag",
+        "size",
+        "missing",
+        "truncated",
+        "header",
+        "footer",
+        "escape",
+    ] {
+        let storage = Server::start(vec![download(0)]);
+        let server = Server::start(vec![
+            list(vec![object(0)], None, None),
+            links(&[0], &storage.origin),
+        ]);
+        let cache = Directory::default();
+        let mut file = cached_object(0);
+        let bytes = match problem {
+            "truncated" => "PAR1",
+            "header" => "FAILtest-dataPAR1",
+            "footer" => "PAR1test-dataFAIL",
+            _ => BYTES,
+        };
+        if problem != "missing" {
+            std::fs::write(cache.0.join("0.parquet"), bytes).unwrap();
+        }
+        match problem {
+            "etag" => file["etag"] = json!("old-etag"),
+            "size" => file["size"] = json!(999),
+            "escape" => file["path"] = json!("../0.parquet"),
+            _ => {}
+        }
+        let manifest = cache_manifest(&cache, &server.origin, vec![file]);
+        let output = Directory::default();
+        let mut api = Api::new(server.origin.clone(), MemoryStore::with_token(TOKEN)).unwrap();
+        let report = api
+            .pull_with_reuse(
+                PROJECT,
+                ("2026-09-08", "2026-09-08"),
+                &output.0,
+                4,
+                &[manifest],
+            )
+            .unwrap();
+        assert_eq!(
+            (report.downloaded_file_count, report.reused_file_count),
+            (1, 0),
+            "{problem}"
+        );
+    }
+}
+
+#[test]
+fn reuse_excludes_objects_no_longer_in_current_listing() {
+    let server = Server::start(vec![list(vec![], None, None)]);
+    let cache = Directory::default();
+    std::fs::write(cache.0.join("0.parquet"), BYTES).unwrap();
+    let manifest = cache_manifest(&cache, &server.origin, vec![cached_object(0)]);
+    let output = Directory::default();
+    let mut api = Api::new(server.origin.clone(), MemoryStore::with_token(TOKEN)).unwrap();
+    let report = api
+        .pull_with_reuse(
+            PROJECT,
+            ("2026-09-08", "2026-09-08"),
+            &output.0,
+            4,
+            &[manifest],
+        )
+        .unwrap();
+    assert_eq!((report.file_count, report.reused_file_count), (0, 0));
+}
+
+#[test]
+fn reuse_rejects_other_origins_projects_and_incomplete_manifests() {
+    for field in ["api_url", "project_id", "completed_at", "schema_version"] {
+        let server = Server::start(vec![list(vec![object(0)], None, None)]);
+        let cache = Directory::default();
+        let path = cache_manifest(&cache, &server.origin, vec![cached_object(0)]);
+        let mut manifest: Value = serde_json::from_slice(&std::fs::read(&path).unwrap()).unwrap();
+        manifest[field] = if field == "schema_version" {
+            json!(999)
+        } else {
+            json!("other")
+        };
+        std::fs::write(&path, serde_json::to_vec(&manifest).unwrap()).unwrap();
+        let mut api = Api::new(server.origin.clone(), MemoryStore::with_token(TOKEN)).unwrap();
+        let output = Directory::default();
+        assert_eq!(
+            api.pull_with_reuse(PROJECT, ("2026-09-08", "2026-09-08"), &output.0, 4, &[path])
+                .err()
+                .unwrap()
+                .code,
+            "INVALID_CACHE"
+        );
+    }
+}
+
+#[test]
+fn cached_data_does_not_bypass_current_read_authorization() {
+    let mut denied = list(vec![], None, None);
+    denied.status = 403;
+    let server = Server::start(vec![denied]);
+    let cache = Directory::default();
+    let path = cache_manifest(&cache, &server.origin, vec![cached_object(0)]);
+    let mut api = Api::new(server.origin.clone(), MemoryStore::with_token(TOKEN)).unwrap();
+    let output = Directory::default();
+    assert_eq!(
+        api.pull_with_reuse(PROJECT, ("2026-09-08", "2026-09-08"), &output.0, 4, &[path])
+            .err()
+            .unwrap()
+            .code,
+        "ACCESS_DENIED"
+    );
+}
+
 #[test]
 fn inclusive_utc_dates_check_calendar_and_93_day_boundary() {
     for (from, to) in [("2026-01-01", "2026-04-03"), ("2024-02-29", "2024-02-29")] {

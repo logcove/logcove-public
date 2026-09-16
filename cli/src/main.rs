@@ -89,6 +89,9 @@ enum DataCommand {
         /// Maximum simultaneous file downloads
         #[arg(long, default_value_t = 4, value_parser = clap::value_parser!(u8).range(1..=8))]
         concurrency: u8,
+        /// Reuse matching local files from a completed manifest (repeatable)
+        #[arg(long = "reuse-manifest")]
+        reuse_manifests: Vec<PathBuf>,
     },
 }
 
@@ -168,8 +171,11 @@ fn run(cli: Cli) -> Result<Value> {
                     to,
                     output,
                     concurrency,
+                    reuse_manifests,
                 },
-        } => Ok(json!({"data":api.pull(&project_id, &from, &to, &output, concurrency)?})),
+        } => Ok(
+            json!({"data":api.pull_with_reuse(&project_id, (&from, &to), &output, concurrency, &reuse_manifests)?}),
+        ),
         Command::Charts { command } => api.chart_command(command),
         Command::Config { .. } | Command::Skills { .. } => unreachable!(),
     }

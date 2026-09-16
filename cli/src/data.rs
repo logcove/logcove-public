@@ -38,7 +38,7 @@ struct DownloadLink {
     expires_at: String,
 }
 
-#[derive(Serialize)]
+#[derive(Deserialize, Serialize)]
 pub struct ManifestFile {
     #[serde(flatten)]
     pub object: LogFile,
@@ -46,7 +46,7 @@ pub struct ManifestFile {
     pub path: String,
 }
 
-#[derive(Serialize)]
+#[derive(Deserialize, Serialize)]
 pub struct Manifest {
     pub schema_version: u8,
     pub api_url: String,
@@ -63,6 +63,8 @@ pub struct PullSummary {
     pub manifest_path: PathBuf,
     pub file_count: usize,
     pub total_bytes: u64,
+    pub downloaded_file_count: usize,
+    pub reused_file_count: usize,
 }
 
 struct DownloadClients {
@@ -110,6 +112,17 @@ impl<S: CredentialStore> Api<S> {
         output: &Path,
         concurrency: u8,
     ) -> Result<PullSummary> {
+        self.pull_with_reuse(project, (from, to), output, concurrency, &[])
+    }
+
+    pub fn pull_with_reuse(
+        &mut self,
+        project: &str,
+        (from, to): (&str, &str),
+        output: &Path,
+        concurrency: u8,
+        reuse_manifests: &[PathBuf],
+    ) -> Result<PullSummary> {
         if !(1..=8).contains(&concurrency) {
             return Err(Error::new(
                 "INVALID_INPUT",
@@ -123,7 +136,14 @@ impl<S: CredentialStore> Api<S> {
             ));
         }
         validate_dates(from, to)?;
+        // Always authorize and refresh the complete listing, including already cached dates.
         let objects = self.log_files(project, from, to)?;
+        let cached = reuse_files(
+            reuse_manifests,
+            &self.origin.origin().ascii_serialization(),
+            project,
+            &objects,
+        )?;
         fs::create_dir_all(output)
             .map_err(|_| file_error("Could not create the download directory."))?;
         let output = output
@@ -145,7 +165,13 @@ impl<S: CredentialStore> Api<S> {
         builder
             .create(&directory)
             .map_err(|_| file_error("Could not create a unique pull directory."))?;
-        let result = self.pull_into(project, (from, to), &objects, &directory, concurrency);
+        let result = self.pull_into(
+            project,
+            (from, to),
+            &objects,
+            &directory,
+            (concurrency, &cached),
+        );
         result.map_err(|mut error| {
             error.message.push_str(&format!(
                 " Incomplete pull: {}. No completed manifest was published.",
@@ -239,7 +265,7 @@ impl<S: CredentialStore> Api<S> {
         (from, to): (&str, &str),
         objects: &[LogFile],
         directory: &Path,
-        concurrency: u8,
+        (concurrency, cached): (u8, &HashMap<String, PathBuf>),
     ) -> Result<PullSummary> {
         let clients = DownloadClients::new()?;
         let mut manifest = Manifest {
@@ -253,9 +279,34 @@ impl<S: CredentialStore> Api<S> {
         };
         let mut offset = 0;
         let mut total_bytes = 0u64;
-        while offset < objects.len() {
+        let mut missing = Vec::new();
+        for (index, object) in objects.iter().enumerate() {
+            let path = format!("{index:06}.parquet");
+            let reused = match cached.get(&object.key) {
+                Some(source) => reuse_file(source, &directory.join(&path), object.size)?,
+                None => false,
+            };
+            if !reused {
+                missing.push((index, object));
+            }
+            total_bytes = total_bytes
+                .checked_add(object.size)
+                .ok_or_else(Error::invalid_response)?;
+            manifest.files.push(ManifestFile {
+                object: object.clone(),
+                path,
+            });
+        }
+        let reused_file_count = objects.len() - missing.len();
+        if reused_file_count > 0 {
+            eprintln!(
+                "Reused {reused_file_count} / {} files locally",
+                objects.len()
+            );
+        }
+        while offset < missing.len() {
             let mut keys = Vec::new();
-            for file in objects.iter().skip(offset).take(20) {
+            for (_, file) in missing.iter().skip(offset).take(20) {
                 keys.push(file.key.as_str());
                 if serde_json::to_vec(&json!({"keys": keys})).unwrap().len() > 16 * 1024 {
                     keys.pop();
@@ -266,7 +317,7 @@ impl<S: CredentialStore> Api<S> {
                 return Err(Error::invalid_response());
             }
             let mut links = self.download_links(project, &keys)?;
-            let batch = &objects[offset..offset + keys.len()];
+            let batch = &missing[offset..offset + keys.len()];
             let local_api = config::is_loopback(&self.origin);
             // Keep API/keyring operations on this thread; workers only fetch storage bytes.
             thread::scope(|scope| -> Result<()> {
@@ -277,7 +328,7 @@ impl<S: CredentialStore> Api<S> {
                 while !pending.is_empty() || active > 0 {
                     while active < concurrency && !pending.is_empty() {
                         let (index, retry) = pending.pop_front().unwrap();
-                        let file = &batch[index];
+                        let (file_index, file) = batch[index];
                         let mut link = links
                             .remove(&file.key)
                             .ok_or_else(Error::invalid_response)?;
@@ -291,7 +342,7 @@ impl<S: CredentialStore> Api<S> {
                                 .remove(&file.key)
                                 .ok_or_else(Error::invalid_response)?;
                         }
-                        let path = directory.join(format!("{:06}.parquet", offset + index));
+                        let path = directory.join(format!("{file_index:06}.parquet"));
                         let url = link.url.clone();
                         links.insert(file.key.clone(), link);
                         let sender = sender.clone();
@@ -334,22 +385,13 @@ impl<S: CredentialStore> Api<S> {
                             eprintln!(
                                 "Downloaded {} / {} files",
                                 offset + completed,
-                                objects.len()
+                                missing.len()
                             );
                         }
                     }
                 }
                 Ok(())
             })?;
-            for (index, file) in batch.iter().enumerate() {
-                total_bytes = total_bytes
-                    .checked_add(file.size)
-                    .ok_or_else(Error::invalid_response)?;
-                manifest.files.push(ManifestFile {
-                    object: file.clone(),
-                    path: format!("{:06}.parquet", offset + index),
-                });
-            }
             offset += keys.len();
         }
         manifest.completed_at = files::now();
@@ -369,8 +411,114 @@ impl<S: CredentialStore> Api<S> {
             manifest_path,
             file_count: objects.len(),
             total_bytes,
+            downloaded_file_count: missing.len(),
+            reused_file_count,
         })
     }
+}
+
+fn reuse_files(
+    manifests: &[PathBuf],
+    origin: &str,
+    project: &str,
+    objects: &[LogFile],
+) -> Result<HashMap<String, PathBuf>> {
+    let current: HashMap<_, _> = objects
+        .iter()
+        .map(|file| (file.key.as_str(), file))
+        .collect();
+    let mut cached = HashMap::new();
+    for path in manifests {
+        let path = path
+            .canonicalize()
+            .map_err(|_| file_error("Could not locate the reuse manifest."))?;
+        let manifest: Manifest = serde_json::from_reader(
+            File::open(&path).map_err(|_| file_error("Could not read the reuse manifest."))?,
+        )
+        .map_err(|_| Error::new("INVALID_CACHE", "Expected a completed Logcove manifest."))?;
+        if manifest.schema_version != 1
+            || manifest.api_url != origin
+            || manifest.project_id != project
+            || OffsetDateTime::parse(&manifest.completed_at, &Rfc3339).is_err()
+        {
+            return Err(Error::new(
+                "INVALID_CACHE",
+                "Reuse manifests must be completed and match this API and Project.",
+            ));
+        }
+        let root = path.parent().unwrap();
+        for file in manifest.files {
+            let Some(object) = current.get(file.object.key.as_str()) else {
+                continue;
+            };
+            if file.object.etag != object.etag || file.object.size != object.size {
+                continue;
+            }
+            // Local manifests must not redirect reuse outside their own run directory.
+            let relative = Path::new(&file.path);
+            if relative.extension().is_none_or(|ext| ext != "parquet")
+                || !relative
+                    .components()
+                    .all(|c| matches!(c, std::path::Component::Normal(_)))
+            {
+                continue;
+            }
+            let Ok(source) = root.join(relative).canonicalize() else {
+                continue;
+            };
+            if source.starts_with(root) && valid_cached_file(&source, object.size) {
+                cached.entry(file.object.key).or_insert(source);
+            }
+        }
+    }
+    Ok(cached)
+}
+
+fn valid_cached_file(path: &Path, size: u64) -> bool {
+    let check = || -> std::io::Result<bool> {
+        let mut file = File::open(path)?;
+        let meta = file.metadata()?;
+        if !meta.is_file() || meta.len() != size || size < 12 {
+            return Ok(false);
+        }
+        let mut header = [0; 4];
+        let mut footer = [0; 4];
+        file.read_exact(&mut header)?;
+        file.seek(SeekFrom::End(-4))?;
+        file.read_exact(&mut footer)?;
+        Ok(&header == b"PAR1" && &footer == b"PAR1")
+    };
+    check().unwrap_or(false)
+}
+
+fn reuse_file(source: &Path, target: &Path, size: u64) -> Result<bool> {
+    // Copy instead of linking so each completed run remains portable and independent.
+    let Ok(mut input) = File::open(source) else {
+        return Ok(false);
+    };
+    let temporary = target.with_extension("parquet.part");
+    let result = (|| {
+        let mut output = private_file(&temporary)?;
+        let copied = std::io::copy(
+            &mut Read::by_ref(&mut input).take(size.saturating_add(1)),
+            &mut output,
+        )
+        .map_err(|_| file_error("Could not copy a cached file."))?;
+        output
+            .sync_all()
+            .map_err(|_| file_error("Could not flush a cached file."))?;
+        drop(output);
+        if copied != size || !valid_cached_file(&temporary, size) {
+            return Ok(false);
+        }
+        fs::rename(&temporary, target)
+            .map_err(|_| file_error("Could not finish a cached file."))?;
+        Ok(true)
+    })();
+    if !matches!(result, Ok(true)) {
+        let _ = fs::remove_file(temporary);
+    }
+    result
 }
 
 fn private_file(path: &Path) -> Result<File> {

@@ -90,6 +90,8 @@ Replace the example day/source with actual available data. A task may span multi
 
 The Skill supports creating Charts and updating existing ones, saving definitions while keeping computation results local. It does not add scheduled refresh, alerts, a dashboard, or image-export commands to the CLI.
 
+For analysis, the Skill first checks completed local manifests. Recalculating an existing snapshot reuses its files directly. Refreshing or extending coverage uses `data pull --reuse-manifest <path>` (repeatable) to list current objects and download only missing or changed files. Each successful pull produces a complete, self-contained manifest with reused files copied locally; it does not append duplicate rows from earlier snapshots. This CLI option is implemented in source, not yet in the published v0.2.0 binary. Older installations must be upgraded before the Skill can use file-level reuse.
+
 ## Repository structure
 
 ```text

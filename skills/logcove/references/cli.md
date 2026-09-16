@@ -34,9 +34,27 @@ Replace example IDs and dates with discovered values and the selected range. `pr
 {"data":{"project_id":"prj_00000000-0000-4000-8000-000000000001","manifest_path":"/your/output/pull-example/manifest.json","file_count":12,"total_bytes":42000}}
 ```
 
-Each invocation creates a new run directory. Its manifest records `api_url`, `project_id`, `start_date`, `end_date`, `completed_at`, and `files`; each file has an object `key`, `size`, `etag`, `ingest_date`, `uploaded_at`, and relative `path`. The manifest contains no signed URLs. A retry starts a new run, not a resume of the previous one.
+Each invocation creates a new run directory. Its manifest records `api_url`, `project_id`, `start_date`, `end_date`, `completed_at`, and `files`; each file has an object `key`, `size`, `etag`, `ingest_date`, `uploaded_at`, and relative `path`. The manifest contains no signed URLs. A retry starts a new run, not a resume of an incomplete one. With `--reuse-manifest`, matching files from completed runs are copied locally into the new run; the result remains self-contained. The response also reports `downloaded_file_count` and `reused_file_count`; `file_count` and `total_bytes` include both.
 
 For more than 93 ingestion days, use separate bounded pulls only for the requested coverage and data still available from retention. Do not combine overlapping pulls of the same objects as extra events; see [duckdb.md](duckdb.md).
+
+### Local reuse and freshness
+
+Before a pull, inspect completed manifests in the task's known download directory and reuse their files when they satisfy the question. Match `api_url`, `project_id`, and the requested UTC ingestion dates; use only data known to belong to the intended account. Current manifests do not record account identity, so keep separate working directories for different accounts. Verify that listed files still exist with the recorded byte sizes; ignore incomplete runs and `.part` files. Do not identify cached objects by signed URLs or numeric local filenames: use the source, object `key`, `etag`, and `size` from the manifest.
+
+For an existing snapshot, rerun DuckDB directly against its exact file list without signing or downloading it again. State the manifest's `completed_at` and coverage. For a refresh or wider period, pull the desired range with the previous completed manifests as reuse inputs:
+
+```sh
+logcove data pull prj_00000000-0000-4000-8000-000000000001 \
+  --from 2026-09-01 --to 2026-09-03 --output ./analysis/logs \
+  --reuse-manifest ./analysis/logs/pull-previous/manifest.json
+```
+
+Use real paths discovered locally, and repeat `--reuse-manifest` for additional completed runs of the same API and Project. The CLI checks the latest authorized file listing, matches key/ETag/size, and checks local size and Parquet markers. Only missing, changed, or invalid local files need signed download links and GET requests. Listing still makes API/storage requests. Existing files are copied rather than hard-linked: this avoids another network download, but uses local disk space. Keep existing local files; do not clear the download directory before each analysis. Query only the returned new manifest, which contains both reused and downloaded files; do not append old manifests to it.
+
+A completed manifest is a snapshot of the listed files, not proof that a date partition will never receive more uploads. If the user asks for current data, refresh the relevant dates; do not skip a date merely because some files for it already exist. This includes delayed uploads to earlier ingestion dates. Do not describe an older snapshot as current.
+
+Check `logcove data pull --help` for `--reuse-manifest`; the change is implemented in source but is not in the published v0.2.0 binary. Without this option, reusing `--output` alone does not skip existing files. On an older binary, reuse an adequate local snapshot directly, or explain that refreshing a previously downloaded date requires downloading that date again until the CLI is upgraded. Do not invent flags or bypass the CLI with authenticated API requests.
 
 ## Manage Projects and write keys
 
@@ -97,6 +115,7 @@ Successful operations return JSON on stdout, usually under `data`. Help/version 
 | `ACCESS_DENIED`, `NOT_FOUND` | Check the selected account, resource, and environment; do not restart login automatically |
 | `NETWORK_ERROR`, `SERVER_ERROR`, `RATE_LIMITED` | Report the failure and request ID if present; retry reads only when appropriate, without an unbounded loop |
 | `OBJECT_CHANGED`, `DOWNLOAD_FAILED`, `DOWNLOAD_DENIED` | Do not analyze the incomplete pull; a new pull starts fresh, and `--concurrency 1` may help diagnose connection pressure |
+| `INVALID_CACHE` | Check the supplied completed manifest, API origin and Project; do not edit its identity to force reuse |
 | `CONFLICT` | For Charts, reconcile the latest revision; for Keys, inspect revocation and Project bindings before choosing an explicit replacement |
 | `INVALID_INPUT`, `PAYLOAD_TOO_LARGE` | Correct command/input files or reduce aggregate size; do not silently truncate rows |
 

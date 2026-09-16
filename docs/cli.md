@@ -179,7 +179,19 @@ The CLI follows all file-list pages and requests signed links in batches of at m
 {"data":{"project_id":"prj_00000000-0000-4000-8000-000000000001","manifest_path":"/your/output/pull-1788825600000000000-1234/manifest.json","file_count":1,"total_bytes":1024}}
 ```
 
-Each invocation creates a new `pull-<time>-<process>` directory inside `--output`. It does not reuse, resume, or overwrite a previous pull. Individual files use numeric local names. Filenames and manifest entries follow the file-list order, independent of download completion order. The manifest is published only after every file succeeds, including a valid empty manifest when there are no files. Read **only files listed in that manifest**, not a glob spanning old runs.
+Each invocation creates a new `pull-<time>-<process>` directory inside `--output`. It does not overwrite or resume an incomplete pull. Individual files use numeric local names. Filenames and manifest entries follow the file-list order, independent of download completion order. The manifest is published only after every file succeeds, including a valid empty manifest when there are no files. Read **only files listed in that manifest**, not a glob spanning old runs.
+
+To refresh or extend a download while reusing local files, pass a completed manifest (repeat the flag for multiple runs of the same API and Project):
+
+```sh
+logcove data pull prj_00000000-0000-4000-8000-000000000001 \
+  --from 2026-09-01 --to 2026-09-03 --output ./analysis/logs \
+  --reuse-manifest ./analysis/logs/pull-previous/manifest.json
+```
+
+This option is implemented in source and is not yet released. Check `data pull --help` on your installed binary. Every pull still fetches the current authorized file listing. Reuse requires the same API origin, Project, object key, ETag and size, plus a local file of the expected size with Parquet markers. Missing, changed or invalid cached files are downloaded normally. Cached files no longer in the server listing are excluded. Mismatched or incomplete manifests return `INVALID_CACHE`. Reusing `--output` alone does not enable reuse.
+
+Matching files are copied into the new run, without signing or downloading them, so the new manifest is complete and remains usable after the old run is removed. Copies consume local disk; this is not a global cache or automatic cleanup policy. Size/marker checks are not a cryptographic integrity check for local edits: treat completed downloads as immutable. Summary fields `downloaded_file_count` and `reused_file_count` distinguish network downloads from local copies; `file_count` and `total_bytes` describe the whole result. With all files cached, listing is still required but signing and storage downloads are skipped. Unchanged historical data can also be queried directly from an existing manifest when no refresh is needed.
 
 ```json
 {
