@@ -344,6 +344,27 @@ fn redirects_are_not_followed_or_exposed() {
 }
 
 #[test]
+fn unknown_or_wrong_status_business_codes_keep_safe_fallbacks() {
+    for (status, remote_code, expected) in [
+        (409, TOKEN, "CONFLICT"),
+        (500, "PROJECT_LIMIT_REACHED", "SERVER_ERROR"),
+    ] {
+        let server = Server::start(vec![Step::json(
+            "GET",
+            "/api/v1/me",
+            Some(TOKEN),
+            status,
+            json!({"error":{"code":remote_code,"message":TOKEN}}),
+        )]);
+        let mut api = Api::new(server.origin.clone(), MemoryStore::with_token(TOKEN)).unwrap();
+        let error = api.whoami().err().unwrap();
+        assert_eq!(error.code, expected);
+        assert!(!serde_json::to_string(&error).unwrap().contains(TOKEN));
+        server.finish();
+    }
+}
+
+#[test]
 fn logout_failure_retains_retryable_session_then_success_clears_it() {
     let server = Server::start(vec![
         Step::json("POST", "/api/auth/sign-out", Some(TOKEN), 500, json!({})).body(json!({})),

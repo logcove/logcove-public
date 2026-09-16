@@ -71,6 +71,10 @@ class SkillTests(unittest.TestCase):
 
             # Exercise the reference's limits and distinguish an empty result from no files.
             for sql, message in [
+                ("SELECT 1 AS value; SELECT 2 AS value;", "single SELECT"),
+                ("SET TimeZone='Asia/Shanghai'; SELECT 1 AS value;", "single SELECT"),
+                ("CREATE TABLE forbidden AS SELECT 1 AS value; SELECT 1;", "single SELECT"),
+                ("SELECT FROM", "single SELECT"),
                 ("SELECT i FROM range(10001) t(i)", "10000 rows"),
                 ("SELECT 1 AS value, 2 AS value", "unique SQL aliases"),
                 ("SELECT repeat('x', 5242880) AS value", "5 MiB"),
@@ -79,6 +83,11 @@ class SkillTests(unittest.TestCase):
                 Path("query.sql").write_text(sql, encoding="utf-8")
                 with self.assertRaisesRegex(ValueError, message):
                     exec(compile(serialize, str(reference), "exec"), namespace)
+            self.assertEqual(namespace["db"].sql("SELECT current_setting('TimeZone')").fetchone()[0], "UTC")
+            self.assertEqual(namespace["db"].sql("SELECT count(*) FROM information_schema.tables WHERE table_name='forbidden'").fetchone()[0], 0)
+            Path("query.sql").write_text("WITH sample AS (SELECT 'a;b' AS value) SELECT * FROM sample; -- trailing comment", encoding="utf-8")
+            exec(compile(serialize, str(reference), "exec"), namespace)
+            self.assertEqual(json.loads(Path("result.json").read_text())["data"], [{"value": "a;b"}])
             Path("query.sql").write_text(f'SELECT service FROM "{PROJECT}" WHERE false', encoding="utf-8")
             exec(compile(serialize, str(reference), "exec"), namespace)
             self.assertEqual(json.loads(Path("result.json").read_text())["data"], [])

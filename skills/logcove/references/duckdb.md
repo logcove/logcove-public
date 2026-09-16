@@ -66,13 +66,17 @@ If the machine is constrained, narrow the requested range or select relevant col
 
 ## Verify and render locally
 
-Run this in the same connection where the time-filtered Project views were registered. Use the actual requested bounds when registering views, outside the saved SQL. Local result files are optional working artifacts and are never uploaded to the Chart API:
+Run this in the same connection where the time-filtered Project views were registered. Saved Chart SQL must be a single SELECT query (including WITH/CTEs), as required by the web/desktop application. Keep SET, view creation, and other setup statements outside `query.sql`. Use the actual requested bounds when registering views, outside the saved SQL. Local result files are optional working artifacts and are never uploaded to the Chart API:
 
 ```python
 from datetime import datetime, timezone
 
 query_path = Path("query.sql")
-cursor = db.execute(query_path.read_text(encoding="utf-8-sig"))
+query = query_path.read_text(encoding="utf-8-sig")
+parsed = json.loads(db.execute("SELECT json_serialize_sql(?)", [query]).fetchone()[0])
+if parsed["error"] or len(parsed["statements"]) != 1:
+    raise ValueError("Chart SQL must be a single SELECT query, including WITH/CTEs")
+cursor = db.execute(query)
 columns = [column[0] for column in cursor.description]
 if len(columns) != len(set(columns)):
     raise ValueError("Use unique SQL aliases for result columns")

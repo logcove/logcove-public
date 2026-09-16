@@ -4,7 +4,7 @@ Charts store definitions only: name, description, Project dependencies, SQL, and
 
 ## Query and local verification
 
-Use `project_ids` as the complete set of Project sources required by the SQL. Register each as a DuckDB view using its full Project ID. The list does not grant access; authorize reads through the CLI.
+Use `project_ids` as the complete set of Project sources required by the SQL. Register each as a DuckDB view using its full Project ID. The list does not grant access; authorize reads through the CLI. Save a single SELECT query (including WITH/CTEs); keep setup statements such as SET or CREATE VIEW outside the saved SQL. Run the parser check in [duckdb.md](duckdb.md#verify-and-render-locally) before executing and saving it.
 
 The application registers each Project as a view filtered by system `_created_time` in the selected half-open range `[start, end)`, normalized to TIMESTAMPTZ. Saved SQL only queries those views and computes the metric; do not include `$start_time`, `$end_time`, or other parameters. Cross-source queries see the same selected receipt-time range for every source. Do not hardcode the current window. Existing `$start_time` / `$end_time` bindings remain compatible, but their predicates are additional conditions inside the filtered views. When updating a legacy definition, explicitly remove obsolete selection predicates; the application does not rewrite SQL. Business event-time fields remain ordinary data and may differ from receipt time. See [duckdb.md](duckdb.md) to reproduce the filtered views locally.
 

@@ -114,7 +114,7 @@ fn revision_conflict_is_not_automatically_retried() {
     .header("X-Request-ID", "chart-conflict")]);
     let mut api = Api::new(server.origin.clone(), MemoryStore::with_token(TOKEN)).unwrap();
     let error = api.update_chart(&args).unwrap_err();
-    assert_eq!(error.code, "CONFLICT");
+    assert_eq!(error.code, "CHART_CONFLICT");
     assert_eq!(error.request_id.as_deref(), Some("chart-conflict"));
     server.finish();
 }
@@ -200,4 +200,27 @@ fn validates_files_bom_limits_ids_and_removed_commands() {
         .output()
         .unwrap();
     assert_eq!(output.status.code(), Some(2));
+}
+
+#[test]
+fn chart_text_limits_match_api_utf16_units_for_create_and_update() {
+    let dir = Directory::default();
+    let mut args = create(&dir);
+    args.name = "\u{1f600}".repeat(50);
+    args.description = Some("\u{1f600}".repeat(1000));
+    assert!(create_body(&args).is_ok());
+    let mut edit = update();
+    edit.name = Some(args.name.clone());
+    edit.description = args.description.clone();
+    assert!(update_body(&edit).is_ok());
+    args.name.push('a');
+    edit.name = Some(args.name.clone());
+    assert_eq!(create_body(&args).unwrap_err().code, "INVALID_INPUT");
+    assert_eq!(update_body(&edit).unwrap_err().code, "INVALID_INPUT");
+    args.name = "a".repeat(100);
+    edit.name = Some(args.name.clone());
+    args.description.as_mut().unwrap().push('a');
+    edit.description = args.description.clone();
+    assert_eq!(create_body(&args).unwrap_err().code, "INVALID_INPUT");
+    assert_eq!(update_body(&edit).unwrap_err().code, "INVALID_INPUT");
 }

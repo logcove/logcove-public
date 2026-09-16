@@ -35,10 +35,32 @@ impl Reply {
                 "This account cannot access the requested resource.",
             ),
             404 => ("NOT_FOUND", "The resource or API endpoint was not found."),
-            409 => (
-                "CONFLICT",
-                "The resource changed. Read its current state before retrying.",
-            ),
+            409 => match self.body.pointer("/error/code").and_then(Value::as_str) {
+                Some("PROJECT_LIMIT_REACHED") => (
+                    "PROJECT_LIMIT_REACHED",
+                    "Your plan's active Project limit has been reached. Archive a Project or upgrade.",
+                ),
+                Some("CHART_CONFLICT") => (
+                    "CHART_CONFLICT",
+                    "The Chart definition changed. Read its latest revision and reconcile before retrying.",
+                ),
+                Some("WRITE_KEY_CONFLICT") => (
+                    "WRITE_KEY_CONFLICT",
+                    "A Project already has another write Key. Inspect its binding before choosing an explicit replacement.",
+                ),
+                Some("KEY_REVOKED") => (
+                    "KEY_REVOKED",
+                    "The Key has been revoked and cannot be modified. Select an active Key.",
+                ),
+                Some("INVALID_KEY_BINDING") => (
+                    "INVALID_KEY_BINDING",
+                    "The Key or Project changed. Read their current state before retrying the binding.",
+                ),
+                _ => (
+                    "CONFLICT",
+                    "The resource changed. Read its current state before retrying.",
+                ),
+            },
             429 => (
                 "RATE_LIMITED",
                 "The API rate limit was reached. Wait before retrying.",

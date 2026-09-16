@@ -55,11 +55,11 @@ Use the official `opentelemetry-sdk` and `opentelemetry-exporter-otlp-proto-http
 - `LoggerProvider` with a `Resource` containing `service.name`.
 - `OTLPLogExporter` from `opentelemetry.exporter.otlp.proto.http._log_exporter`, with the full `endpoint`, dictionary `headers` from the private file, optional `Compression.Gzip`, and an explicit timeout. Header dictionary values are literal: use `Bearer ` with a space, not `Bearer%20`.
 - `BatchLogRecordProcessor` and a `LoggingHandler` connected to a Python logger at an appropriate level. Emit an actual log inside a route; receiving HTTP requests or enabling tracing alone does not create application log records.
-- Flush/shutdown on application exit. For a standalone FastAPI lifespan, `await asyncio.to_thread(provider.shutdown)` after `yield` drains the provider without blocking the event loop. Do not add duplicate handlers/providers to an already instrumented application.
+- Follow the chosen language and SDK's documented flush/shutdown lifecycle on application exit, allowing enough shutdown time for pending exports. The application owns this integration; adapt it to the existing framework lifecycle rather than prescribing one sequence for every SDK. Shutdown attempts to export pending logs, but timeouts, export failures, or forced termination can still lose logs. Do not add duplicate handlers/providers to an already instrumented application.
 
-Only configuring exporter environment variables does not activate logging or capture all application logs. Explain the scope of the example: one explicit route log is not automatic capture of every framework/access log. For a short-lived script, emit the log and shut down the provider before exiting.
+Only configuring exporter environment variables does not activate logging or capture all application logs. Explain the scope of the example: one explicit route log is not automatic capture of every framework/access log. Short-lived scripts also need the SDK's documented exit handling.
 
-Python export timeouts are in seconds; `timeout=120` is a reasonable initial value for this ingestion flow, not a delivery SLA. Match timeout units to the actual SDK rather than copying a millisecond value from another language. Use bounded retries; a timeout can occur after acceptance, so resending may create duplicates.
+Python export timeouts are in seconds; `timeout=120` is a reasonable initial value for this ingestion flow, not a delivery SLA. An export-request timeout does not necessarily control how long SDK shutdown waits; check the SDK and application's shutdown settings separately. Match timeout units to the actual SDK rather than copying a millisecond value from another language. Use bounded retries; a timeout can occur after acceptance, so resending may create duplicates. Completion of flush/shutdown alone is not proof of delivery; verify ingestion as described below.
 
 ## OTel Collector
 

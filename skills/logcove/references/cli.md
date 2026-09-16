@@ -116,7 +116,10 @@ Successful operations return JSON on stdout, usually under `data`. Help/version 
 | `NETWORK_ERROR`, `SERVER_ERROR`, `RATE_LIMITED` | Report the failure and request ID if present; retry reads only when appropriate, without an unbounded loop |
 | `OBJECT_CHANGED`, `DOWNLOAD_FAILED`, `DOWNLOAD_DENIED` | Do not analyze the incomplete pull; a new pull starts fresh, and `--concurrency 1` may help diagnose connection pressure |
 | `INVALID_CACHE` | Check the supplied completed manifest, API origin and Project; do not edit its identity to force reuse |
-| `CONFLICT` | For Charts, reconcile the latest revision; for Keys, inspect revocation and Project bindings before choosing an explicit replacement |
+| `PROJECT_LIMIT_REACHED` | The plan's active Project limit is full. Explain the limit; archiving another Project or upgrading requires the user's authorization. Retrying unchanged input will not help |
+| `CHART_CONFLICT` | Read the latest Chart revision and reconcile the definition before retrying |
+| `WRITE_KEY_CONFLICT`, `INVALID_KEY_BINDING`, `KEY_REVOKED` | Inspect current Project bindings and Key revocation. A revoked Key cannot be restored; choose an active Key or an explicit replacement within the user's scope |
+| `CONFLICT` | An unrecognized conflict, or an older CLI. Inspect current state and the request ID before retrying; do not assume it is a Chart revision conflict |
 | `INVALID_INPUT`, `PAYLOAD_TOO_LARGE` | Correct command/input files or reduce aggregate size; do not silently truncate rows |
 
 A failed write may have reached the service before its response was lost. Inspect existing state before retrying Chart creation or other mutations, to avoid duplicates or overwrites. This Skill grants no additional permission to delete Charts, revoke sessions, or change configuration beyond the user's task.

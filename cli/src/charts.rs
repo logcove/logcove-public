@@ -92,14 +92,14 @@ fn validate_project_sources(ids: &[String]) -> Result<()> {
 
 fn name(value: &str) -> Result<String> {
     let value = value.trim();
-    if value.is_empty() || value.chars().count() > 100 {
+    if value.is_empty() || value.encode_utf16().count() > 100 {
         return Err(invalid("Chart name must contain 1 to 100 characters."));
     }
     Ok(value.into())
 }
 
 fn description(value: &str) -> Result<Value> {
-    if value.chars().count() > 2000 {
+    if value.encode_utf16().count() > 2000 {
         return Err(invalid("Description exceeds 2000 characters."));
     }
     Ok(json!(value))

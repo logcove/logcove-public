@@ -406,6 +406,9 @@ fn api_failures_remove_reserved_files_do_not_leak_secrets_or_retry_creates() {
         (403, "ACCESS_DENIED"),
         (404, "NOT_FOUND"),
         (409, "CONFLICT"),
+        (409, "WRITE_KEY_CONFLICT"),
+        (409, "INVALID_KEY_BINDING"),
+        (409, "KEY_REVOKED"),
         (500, "SERVER_ERROR"),
     ] {
         let directory = Directory::default();
@@ -415,7 +418,7 @@ fn api_failures_remove_reserved_files_do_not_leak_secrets_or_retry_creates() {
             "/api/v1/keys",
             Some(TOKEN),
             status,
-            json!({"error":{"message":secret()}}),
+            json!({"error":{"code":code,"message":secret()}}),
         )
         .header("X-Request-ID", "test-request")]);
         let store = MemoryStore::with_token(TOKEN);
@@ -428,7 +431,47 @@ fn api_failures_remove_reserved_files_do_not_leak_secrets_or_retry_creates() {
         assert_eq!(store.0.borrow().token.is_none(), status == 401);
         if status == 500 {
             assert!(error.message.contains("before retrying"));
+        } else if status == 409 {
+            assert!(!error.message.contains("may have reached the server"));
         }
+        server.finish();
+    }
+}
+
+#[test]
+fn project_quota_errors_explain_create_and_restore_failures_without_retrying() {
+    for (method, route, command) in [
+        (
+            "POST",
+            "/api/v1/projects".to_owned(),
+            ProjectCommand::Create {
+                name: "Logs".into(),
+                description: None,
+                ingestion_protocol: IngestionProtocol::HttpJson,
+            },
+        ),
+        (
+            "PATCH",
+            format!("/api/v1/projects/{PROJECT}"),
+            ProjectCommand::Restore { id: PROJECT.into() },
+        ),
+    ] {
+        let server = Server::start(vec![Step::json(
+            method,
+            &route,
+            Some(TOKEN),
+            409,
+            json!({"error":{"code":"PROJECT_LIMIT_REACHED","message":secret()}}),
+        )
+        .header("X-Request-ID", "quota-request")]);
+        let store = MemoryStore::with_token(TOKEN);
+        let mut api = Api::new(server.origin.clone(), store.clone()).unwrap();
+        let error = api.project_command(command).unwrap_err();
+        assert_eq!(error.code, "PROJECT_LIMIT_REACHED");
+        assert!(error.message.contains("Archive a Project or upgrade"));
+        assert!(!error.message.contains(&secret()));
+        assert_eq!(error.request_id.as_deref(), Some("quota-request"));
+        assert!(store.0.borrow().token.is_some());
         server.finish();
     }
 }

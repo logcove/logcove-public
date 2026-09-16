@@ -310,7 +310,7 @@ impl<S: CredentialStore> Api<S> {
         // Reserve the destination before creating a once-only server credential.
         let mut file = SecretFile::create(&args.output)?;
         let created: CreatedKey = self.management(Method::POST, "/api/v1/keys", Some(body)).map_err(|mut error| {
-            if !matches!(error.code, "UNAUTHENTICATED" | "INVALID_INPUT" | "ACCESS_DENIED" | "NOT_FOUND" | "CONFLICT" | "PAYLOAD_TOO_LARGE") {
+            if !matches!(error.code, "UNAUTHENTICATED" | "INVALID_INPUT" | "ACCESS_DENIED" | "NOT_FOUND" | "CONFLICT" | "WRITE_KEY_CONFLICT" | "INVALID_KEY_BINDING" | "KEY_REVOKED" | "PROJECT_LIMIT_REACHED" | "PAYLOAD_TOO_LARGE") {
                 error.message.push_str(" Key creation may have reached the server. Inspect logcove keys list before retrying; the secret cannot be retrieved again.");
             }
             error
