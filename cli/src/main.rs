@@ -121,10 +121,9 @@ fn run(cli: Cli) -> Result<Value> {
             command: ConfigCommand::Show
         }
     ) {
-        let effective = match cli.api_url.as_deref().or(saved.api_url.as_deref()) {
-            Some(value) => Some(config::origin(value)?.origin().ascii_serialization()),
-            None => None,
-        };
+        let effective = config::resolve(cli.api_url.as_deref(), &saved)?
+            .origin()
+            .ascii_serialization();
         return Ok(
             json!({"data": {"api_url": effective, "config_file": directory.join("config.json")}}),
         );

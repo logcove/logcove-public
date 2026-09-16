@@ -688,10 +688,12 @@ fn cli_requires_an_output_file_and_explicit_binding_changes() {
         let output = Command::new(env!("CARGO_BIN_EXE_logcove"))
             .env_remove("LOGCOVE_API_URL")
             .env("LOGCOVE_CONFIG_DIR", &directory.0)
+            // Stop valid syntax before any credential-store or network access.
+            .args(["--api-url", "invalid"])
             .args(args)
             .output()
             .unwrap();
         assert_eq!(output.status.code(), Some(1));
-        assert!(String::from_utf8_lossy(&output.stderr).contains("API_NOT_CONFIGURED"));
+        assert!(String::from_utf8_lossy(&output.stderr).contains("INVALID_API_URL"));
     }
 }

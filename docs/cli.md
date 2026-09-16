@@ -19,10 +19,9 @@ This local command works before configuring an API or logging in, including when
 
 ## Select an API environment
 
-Configure the actual origin supplied by your Logcove deployment:
+The CLI defaults to `https://api.logcove.com`. Ordinary users can run `logcove login` directly. Inspect the effective address with:
 
 ```sh
-logcove config set-api-url https://your-api.example.com
 logcove config show
 ```
 
@@ -32,9 +31,9 @@ For local development:
 logcove config set-api-url http://localhost:8787
 ```
 
-No default production endpoint is assumed. Precedence is `--api-url`, `LOGCOVE_API_URL`, then the saved origin. A flag or environment override applies to that invocation and does not overwrite the saved configuration.
+Precedence is `--api-url`, `LOGCOVE_API_URL`, the saved origin, then the built-in production address. A flag or environment override applies to that invocation and does not overwrite the saved configuration. Invalid explicit configuration reports an error rather than silently switching to production.
 
-The agreed future production API is `https://api.logcove.com`, with the web application at `https://app.logcove.com`. After deployment and verification, a future release will use that API as a built-in fallback after the three overrides above. The test API is planned at `https://api-test.logcove.com`. These addresses are deployment plans, not currently verified service endpoints; the current CLI has no built-in default. Upgrades will preserve an explicitly saved local, test, or self-hosted origin.
+The production web application is `https://app.logcove.com`. The default API is implemented in the current source and is pending release; published v0.2.0 still requires explicit configuration. Upgrades preserve explicitly saved local, test, or self-hosted origins and their separate credentials.
 
 ```sh
 logcove --api-url http://localhost:8787 whoami
@@ -196,7 +195,7 @@ Matching files are copied into the new run, without signing or downloading them,
 ```json
 {
   "schema_version": 1,
-  "api_url": "https://your-api.example.com",
+  "api_url": "https://api.logcove.com",
   "project_id": "prj_00000000-0000-4000-8000-000000000001",
   "start_date": "2026-09-01",
   "end_date": "2026-09-02",
@@ -286,7 +285,7 @@ Normal results are JSON on stdout. Login instructions and warnings use stderr. R
 
 API errors include a request ID when the server supplies one. The CLI does not print raw HTTP error bodies, request headers, access tokens, or credential-store error details. HTTP redirects are refused; configure the final API origin instead.
 
-Common codes include `API_NOT_CONFIGURED`, `INVALID_API_URL`, `UNAUTHENTICATED`, `ACCESS_DENIED`, `NOT_FOUND`, `RATE_LIMITED`, `NETWORK_ERROR`, `SERVER_ERROR`, `AUTHORIZATION_DENIED`, `AUTHORIZATION_EXPIRED`, and credential-store errors. Download/input failures additionally include `INVALID_DATE_RANGE`, `FILE_ERROR`, `DOWNLOAD_FAILED`, `DOWNLOAD_DENIED`, `OBJECT_CHANGED`, `INVALID_PARQUET`, `INVALID_INPUT`, and `PAYLOAD_TOO_LARGE`. Only authentication failure is a reason to log in again; a 403 or 5xx does not mean the Session expired.
+Common codes include `INVALID_API_URL`, `UNAUTHENTICATED`, `ACCESS_DENIED`, `NOT_FOUND`, `RATE_LIMITED`, `NETWORK_ERROR`, `SERVER_ERROR`, `AUTHORIZATION_DENIED`, `AUTHORIZATION_EXPIRED`, and credential-store errors. Download/input failures additionally include `INVALID_DATE_RANGE`, `FILE_ERROR`, `DOWNLOAD_FAILED`, `DOWNLOAD_DENIED`, `OBJECT_CHANGED`, `INVALID_PARQUET`, `INVALID_INPUT`, and `PAYLOAD_TOO_LARGE`. Only authentication failure is a reason to log in again; a 403 or 5xx does not mean the Session expired.
 
 ## Development checks
 

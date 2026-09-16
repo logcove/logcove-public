@@ -11,7 +11,7 @@ logcove whoami
 logcove login
 ```
 
-If the deployment is not configured, get its actual API origin from the user or existing project settings, then use `logcove config set-api-url <origin>`. `--api-url <origin>` overrides the target for one invocation; use it consistently throughout the task. Precedence is flag, `LOGCOVE_API_URL`, saved configuration.
+The CLI defaults to `https://api.logcove.com`; ordinary users can run `logcove login` without configuring an address. Use `logcove config show` to check the effective origin and preserve an existing override. Only configure another origin when the user selects a development or other deployment. Precedence is flag, `LOGCOVE_API_URL`, saved configuration, then the production default. `--api-url <origin>` overrides the target for one invocation; use it consistently throughout the task. Published v0.2.0 predates this default: if it reports `API_NOT_CONFIGURED`, explain that the CLI needs an update; do not ask ordinary users to invent or supply an API address.
 
 Login uses a signed Bearer Session, not a JWT or Vector write key. The CLI stores it in the OS credential service, independently of the desktop app. Do not read the keychain, request a Session token from the user, put Session tokens in shell commands, or build Session Authorization headers. Log ingestion uses a separate write-key header as described in [ingestion.md](ingestion.md).
 

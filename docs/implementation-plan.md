@@ -42,7 +42,7 @@ Normal command output is stable JSON on stdout. Login instructions, progress, an
 
 ## Batch 1: authentication and discovery
 
-Configuration precedence is `--api-url`, then `LOGCOVE_API_URL`, then the saved API origin. No undeployed production endpoint is assumed. `--config-dir` / `LOGCOVE_CONFIG_DIR` allow an isolated configuration directory; otherwise use the OS configuration directory plus `logcove`. Configuration contains only the API origin.
+Configuration precedence is `--api-url`, then `LOGCOVE_API_URL`, then the saved API origin, then `https://api.logcove.com`. The production fallback is implemented in source and pending release. `--config-dir` / `LOGCOVE_CONFIG_DIR` allow an isolated configuration directory; otherwise use the OS configuration directory plus `logcove`. Configuration contains only the API origin.
 
 Only HTTPS origins and loopback HTTP development origins are accepted. URL credentials, paths other than `/`, query strings, and fragments are rejected. HTTP redirects are not followed with a Session attached.
 
@@ -90,7 +90,7 @@ The production web application will use `https://app.logcove.com`, and the publi
 
 The test web application and API will use `https://app-test.logcove.com` and `https://api-test.logcove.com`; test ingestion will use `https://ingest-test.logcove.com/logs`. These are agreed target addresses, not a claim that services are deployed or reachable.
 
-Before a stable public release, after the production API is deployed and verified, add `https://api.logcove.com` as the built-in fallback. Planned precedence is `--api-url`, then `LOGCOVE_API_URL`, then the saved API origin, then the built-in production origin. Upgrades preserve saved origins and origin-scoped credentials. Test releases use an explicitly configured test API. The current CLI still requires an explicit API origin, as described in batch 1; this documentation change does not change runtime behavior.
+Update (2026-09-17): the source now includes `https://api.logcove.com` as the built-in fallback, after `--api-url`, `LOGCOVE_API_URL`, and the saved API origin. Upgrades preserve saved origins and origin-scoped credentials. Development and test environments use explicit overrides. Published v0.2.0 predates this runtime change and still requires an explicit API origin.
 
 ## Dependencies and maintenance
 

@@ -8,7 +8,7 @@ The original batch 2 installation/update-script plan is superseded by Homebrew a
 
 Version 0.2.0 adds the bundled `skills install` command and Homebrew/WinGet metadata generation. Metadata is prepared privately; neither a public tap nor a WinGet submission is created before product launch. There is no npm distribution. See [package-manager distribution](package-managers.md).
 
-The CLI still requires an explicit API origin. The agreed default `https://api.logcove.com` is a future runtime change after deployment and verification. The 2026-09-09 release decision separates binary distribution from hosted-service rollout: v0.1.0 can be installed now and configured against an existing deployment. Publishing a CLI release does not deploy the API or make the planned production/test origins available. The README uses an explicitly marked example origin until a hosted service is available.
+The current source defaults to `https://api.logcove.com` and preserves flag, environment and saved-origin overrides. This change is pending release; published v0.1.0 and v0.2.0 still require explicit configuration. The README quick start describes the upcoming release's direct login flow. Publishing a CLI release does not deploy the API.
 
 ## Version and targets
 

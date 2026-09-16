@@ -7,6 +7,8 @@ use std::{
     path::{Path, PathBuf},
 };
 
+pub const DEFAULT_API_URL: &str = "https://api.logcove.com";
+
 #[derive(Default, Deserialize, Serialize)]
 #[serde(deny_unknown_fields)]
 pub struct Config {
@@ -88,10 +90,9 @@ pub fn is_loopback(url: &Url) -> bool {
 }
 
 pub fn resolve(override_url: Option<&str>, saved: &Config) -> Result<Url> {
-    origin(override_url.or(saved.api_url.as_deref()).ok_or_else(|| {
-        Error::new(
-            "API_NOT_CONFIGURED",
-            "Run logcove config set-api-url <origin>, or set --api-url / LOGCOVE_API_URL.",
-        )
-    })?)
+    origin(
+        override_url
+            .or(saved.api_url.as_deref())
+            .unwrap_or(DEFAULT_API_URL),
+    )
 }

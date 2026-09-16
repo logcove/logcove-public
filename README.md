@@ -46,12 +46,13 @@ For analysis, you also need Codex or Claude Code and a local [DuckDB](https://du
 
 ## Quick start
 
-### 1. Connect and sign in
+This streamlined workflow is implemented in the current source and will ship in the next release. For published v0.2.0 compatibility, see the [CLI reference](docs/cli.md).
 
-You need a running Logcove deployment and an account. Replace the example address with the API origin supplied by your deployment:
+### 1. Sign in
+
+Sign in to your Logcove account:
 
 ```sh
-logcove config set-api-url https://your-api.example.com
 logcove login
 logcove whoami
 logcove projects list
@@ -59,7 +60,7 @@ logcove projects list
 
 `login` opens your browser. Sign in and approve the CLI request; your session is saved in your OS credential store. For a link you can open manually, use `logcove login --no-browser`.
 
-The CLI currently requires an explicit API address. Each Project in the list is a data source you can explore.
+Each Project in the list is a data source you can explore.
 
 ### 2. Install the Skill
 

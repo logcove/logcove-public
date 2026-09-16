@@ -78,7 +78,11 @@ fn cli_config_persists_normalized_origin_and_needs_no_keyring() {
     let directory = Directory::new();
     let result = directory.command(&["config", "show"]);
     assert!(result.status.success());
-    assert!(serde_json::from_slice::<Value>(&result.stdout).unwrap()["data"]["api_url"].is_null());
+    assert_eq!(
+        serde_json::from_slice::<Value>(&result.stdout).unwrap()["data"]["api_url"],
+        "https://api.logcove.com"
+    );
+    assert!(!directory.0.join("config.json").exists());
     let result = directory.command(&["config", "set-api-url", "https://API.example.test:443/"]);
     assert!(result.status.success());
     assert!(result.stderr.is_empty());
@@ -127,13 +131,41 @@ fn api_flag_overrides_environment_which_overrides_saved_configuration() {
 }
 
 #[test]
-fn missing_configuration_returns_structured_stderr_without_touching_keyring() {
+fn missing_configuration_uses_production_but_invalid_overrides_do_not_fall_back() {
     let directory = Directory::new();
-    let result = directory.command(&["whoami"]);
+    assert_eq!(
+        config::resolve(None, &config::load(&directory.0).unwrap())
+            .unwrap()
+            .as_str(),
+        "https://api.logcove.com/"
+    );
+    assert_eq!(
+        config::resolve(
+            None,
+            &config::Config {
+                api_url: Some("http://localhost:8787".into())
+            }
+        )
+        .unwrap()
+        .as_str(),
+        "http://localhost:8787/"
+    );
+    assert_eq!(
+        config::resolve(
+            None,
+            &config::Config {
+                api_url: Some("invalid".into())
+            }
+        )
+        .unwrap_err()
+        .code,
+        "INVALID_API_URL"
+    );
+    let result = directory.command(&["--api-url", "invalid", "config", "show"]);
     assert_eq!(result.status.code(), Some(1));
     assert!(result.stdout.is_empty());
     let error: Value = serde_json::from_slice(&result.stderr).unwrap();
-    assert_eq!(error["error"]["code"], "API_NOT_CONFIGURED");
+    assert_eq!(error["error"]["code"], "INVALID_API_URL");
 }
 
 #[test]
