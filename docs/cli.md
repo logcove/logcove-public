@@ -2,11 +2,11 @@
 
 ## Install
 
-Download the prebuilt CLI for your platform from [v0.2.0](https://github.com/logcove/logcove-public/releases/tag/v0.2.0), extract it, and place `logcove` (`logcove.exe` on Windows) on PATH. Follow the [installation guide](../README.md#install) for macOS, Linux and Windows commands. Rust and a source checkout are not needed.
+Download the prebuilt CLI for your platform from [v0.3.0](https://github.com/logcove/logcove-public/releases/tag/v0.3.0), extract it, and place `logcove` (`logcove.exe` on Windows) on PATH. Follow the [installation guide](../README.md#install) for macOS, Linux and Windows commands. Rust and a source checkout are not needed.
 
 The CLI implements authentication, Project and write-key management, Parquet downloads, and Chart operations. Each CLI package also includes the [analysis Skill](skills.md). CLI commands do not require DuckDB; install DuckDB separately for local analysis. Source builds and development commands are in the [development guide](development.md#local-development).
 
-Project mutations and `keys` commands below are implemented in the current source and are not in the published v0.2.0 binary. Check `logcove projects --help` and `logcove keys --help` before using them with an installed release.
+Project mutations and `keys` commands below require CLI 0.3.0 or newer. Check `logcove projects --help` and `logcove keys --help` before using them with an installed release.
 
 ## Install the bundled Skill (0.2.0+)
 
@@ -33,7 +33,7 @@ logcove config set-api-url http://localhost:8787
 
 Precedence is `--api-url`, `LOGCOVE_API_URL`, the saved origin, then the built-in production address. A flag or environment override applies to that invocation and does not overwrite the saved configuration. Invalid explicit configuration reports an error rather than silently switching to production.
 
-The production web application is `https://app.logcove.com`. The default API is implemented in the current source and is pending release; published v0.2.0 still requires explicit configuration. Upgrades preserve explicitly saved local, test, or self-hosted origins and their separate credentials.
+The production web application is `https://app.logcove.com`. The default API is included in CLI 0.3.0; older releases require explicit configuration. Upgrades preserve explicitly saved local, test, or self-hosted origins and their separate credentials.
 
 ```sh
 logcove --api-url http://localhost:8787 whoami
@@ -113,7 +113,7 @@ Each Project has one immutable `ingestion_protocol`: `http_json` (the default) o
 logcove projects create --name "OTel logs" --ingestion-protocol otlp_http
 ```
 
-Use `--ingestion-protocol http_json` for ordinary JSON. `projects update` does not accept the protocol; create a different Project to change formats. The same write Key may bind Projects of different protocols, but each request must use the matching Project and protocol endpoint. This flag requires the updated API; these source changes are not yet released. A created OTLP Project alone does not prove its collector endpoint is deployed. Use the endpoint supplied by that environment, never guess it from the API host.
+Use `--ingestion-protocol http_json` for ordinary JSON. `projects update` does not accept the protocol; create a different Project to change formats. The same write Key may bind Projects of different protocols, but each request must use the matching Project and protocol endpoint. This flag requires CLI 0.3.0 and an API with OTLP Project support. A created OTLP Project alone does not prove its collector endpoint is deployed. Use the endpoint supplied by that environment, never guess it from the API host.
 
 All commands authenticate using the CLI's stored Session. Write keys authenticate Vector ingestion only; they cannot log in to the CLI or read data.
 
@@ -188,7 +188,7 @@ logcove data pull prj_00000000-0000-4000-8000-000000000001 \
   --reuse-manifest ./analysis/logs/pull-previous/manifest.json
 ```
 
-This option is implemented in source and is not yet released. Check `data pull --help` on your installed binary. Every pull still fetches the current authorized file listing. Reuse requires the same API origin, Project, object key, ETag and size, plus a local file of the expected size with Parquet markers. Missing, changed or invalid cached files are downloaded normally. Cached files no longer in the server listing are excluded. Mismatched or incomplete manifests return `INVALID_CACHE`. Reusing `--output` alone does not enable reuse.
+This option requires CLI 0.3.0 or newer. Check `data pull --help` on your installed binary. Every pull still fetches the current authorized file listing. Reuse requires the same API origin, Project, object key, ETag and size, plus a local file of the expected size with Parquet markers. Missing, changed or invalid cached files are downloaded normally. Cached files no longer in the server listing are excluded. Mismatched or incomplete manifests return `INVALID_CACHE`. Reusing `--output` alone does not enable reuse.
 
 Matching files are copied into the new run, without signing or downloading them, so the new manifest is complete and remains usable after the old run is removed. Copies consume local disk; this is not a global cache or automatic cleanup policy. Size/marker checks are not a cryptographic integrity check for local edits: treat completed downloads as immutable. Summary fields `downloaded_file_count` and `reused_file_count` distinguish network downloads from local copies; `file_count` and `total_bytes` describe the whole result. With all files cached, listing is still required but signing and storage downloads are skipped. Unchanged historical data can also be queried directly from an existing manifest when no refresh is needed.
 
@@ -242,7 +242,7 @@ Inspect fields and samples before writing SQL. Register one view per downloaded 
 
 ## Manage Charts
 
-The working tree uses definition-only Charts; these changes are pending release and are newer than published v0.2.0. Results stay local. The removed `--result-file` option and `charts result put` command are no longer supported.
+CLI 0.3.0 uses definition-only Charts, replacing the result-upload contract in v0.1.x and v0.2.x. Results stay local. The removed `--result-file` option and `charts result put` command are no longer supported.
 
 ```sh
 logcove charts list

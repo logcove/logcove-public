@@ -42,7 +42,7 @@ Normal command output is stable JSON on stdout. Login instructions, progress, an
 
 ## Batch 1: authentication and discovery
 
-Configuration precedence is `--api-url`, then `LOGCOVE_API_URL`, then the saved API origin, then `https://api.logcove.com`. The production fallback is implemented in source and pending release. `--config-dir` / `LOGCOVE_CONFIG_DIR` allow an isolated configuration directory; otherwise use the OS configuration directory plus `logcove`. Configuration contains only the API origin.
+Configuration precedence is `--api-url`, then `LOGCOVE_API_URL`, then the saved API origin, then `https://api.logcove.com`. The production fallback is part of CLI 0.3.0. `--config-dir` / `LOGCOVE_CONFIG_DIR` allow an isolated configuration directory; otherwise use the OS configuration directory plus `logcove`. Configuration contains only the API origin.
 
 Only HTTPS origins and loopback HTTP development origins are accepted. URL credentials, paths other than `/`, query strings, and fragments are rejected. HTTP redirects are not followed with a Session attached.
 
@@ -66,7 +66,7 @@ Dates select UTC ingestion partitions, not event timestamps. Apply event-time fi
 
 For portable SQL, the Skill registers a DuckDB view named by the full Project ID for each downloaded source. Saved SQL references those views, not machine-specific absolute paths. This is a client naming convention, not a new Chart field or implicit authorization rule. `project_ids` remain tag-like metadata.
 
-Charts now store definitions only. Definition updates respect revision conflicts. Source SQL declares every Project dependency and has no parameters; the application filters every source view by system `_created_time` before running the calculation. Vega-Lite uses `data: {"name":"result"}`. Web/desktop calculates the selected time range locally and caches aggregate rows in memory; there is no result upload, history, thumbnail, query_params, or scheduled refresh. This working-tree contract is pending release.
+Charts now store definitions only. Definition updates respect revision conflicts. Source SQL declares every Project dependency and has no parameters; the application filters every source view by system `_created_time` before running the calculation. Vega-Lite uses `data: {"name":"result"}`. Web/desktop calculates the selected time range locally and caches aggregate rows in memory; there is no result upload, history, thumbnail, query_params, or scheduled refresh. This contract is part of CLI 0.3.0.
 
 Batch 2 acceptance: real authorized Parquet downloads, known DuckDB aggregates, Chart definition creation/update and local time-range calculation, and successful web rendering. The test API's R2 listing binding and download-signing target must point to the same real storage; locally emulated R2 cannot validate real downloads.
 

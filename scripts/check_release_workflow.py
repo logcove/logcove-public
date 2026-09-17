@@ -44,6 +44,9 @@ class PublishTests(unittest.TestCase):
                 root = Path(temporary)
                 (root / "dist").mkdir()
                 (root / "dist/fixture.zip").write_text("fixture")
+                notes = root / f"docs/release-notes/{tag}.md"
+                notes.parent.mkdir(parents=True)
+                notes.write_text("Release notes\n\nUpgrade instructions.\n")
                 env = dict(
                     os.environ, MOCK_STATE=state, MOCK_FAIL_UPLOAD=str(int(failure)),
                     MOCK_LOG=str(root / "calls"), RELEASE_TAG=tag,
@@ -63,6 +66,19 @@ class PublishTests(unittest.TestCase):
                 if published:
                     self.assertTrue(calls[-2].startswith("release upload"), calls)
                     self.assertIn(f'--prerelease={str("-" in tag).lower()}', calls[-1])
+                    self.assertIn(f"--notes-file docs/release-notes/{tag}.md", calls[-1])
+
+    def test_missing_release_notes_prevent_remote_changes(self):
+        workflow = yaml.safe_load((ROOT / ".github/workflows/release.yml").read_text())
+        script = workflow["jobs"]["publish"]["steps"][-1]["run"]
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            env = dict(os.environ, MOCK_STATE="absent", MOCK_FAIL_UPLOAD="0",
+                       MOCK_LOG=str(root / "calls"), RELEASE_TAG="v0.3.0")
+            result = subprocess.run(["bash", "-c", MOCK_GH + script], cwd=root, env=env,
+                                    capture_output=True, text=True)
+            self.assertNotEqual(result.returncode, 0)
+            self.assertFalse((root / "calls").exists())
 
 
 if __name__ == "__main__":

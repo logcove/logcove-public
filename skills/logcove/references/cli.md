@@ -54,7 +54,7 @@ Use real paths discovered locally, and repeat `--reuse-manifest` for additional 
 
 A completed manifest is a snapshot of the listed files, not proof that a date partition will never receive more uploads. If the user asks for current data, refresh the relevant dates; do not skip a date merely because some files for it already exist. This includes delayed uploads to earlier ingestion dates. Do not describe an older snapshot as current.
 
-Check `logcove data pull --help` for `--reuse-manifest`; the change is implemented in source but is not in the published v0.2.0 binary. Without this option, reusing `--output` alone does not skip existing files. On an older binary, reuse an adequate local snapshot directly, or explain that refreshing a previously downloaded date requires downloading that date again until the CLI is upgraded. Do not invent flags or bypass the CLI with authenticated API requests.
+Check `logcove data pull --help` for `--reuse-manifest`; it requires CLI 0.3.0 or newer. Without this option, reusing `--output` alone does not skip existing files. On an older binary, reuse an adequate local snapshot directly, or explain that refreshing a previously downloaded date requires downloading that date again until the CLI is upgraded. Do not invent flags or bypass the CLI with authenticated API requests.
 
 ## Manage Projects and write keys
 
@@ -64,9 +64,9 @@ Each Project has one immutable `ingestion_protocol`: `http_json` (the default) o
 logcove projects create --name "OTel logs" --ingestion-protocol otlp_http
 ```
 
-Use `--ingestion-protocol http_json` for ordinary JSON. `projects update` does not accept the protocol; create a different Project to change formats. The same write Key may bind Projects of different protocols, but each request must use the matching Project and protocol endpoint. This flag requires the updated API; these source changes are not yet released. A created OTLP Project alone does not prove its collector endpoint is deployed. Use the endpoint supplied by that environment, never guess it from the API host.
+Use `--ingestion-protocol http_json` for ordinary JSON. `projects update` does not accept the protocol; create a different Project to change formats. The same write Key may bind Projects of different protocols, but each request must use the matching Project and protocol endpoint. This flag requires CLI 0.3.0 and an API with OTLP Project support. A created OTLP Project alone does not prove its collector endpoint is deployed. Use the endpoint supplied by that environment, never guess it from the API host.
 
-These commands require the current management-capable CLI; the published v0.2.0 binary lacks them. Check `projects --help` and `keys --help`. They use the saved login Session and do not need DuckDB or data downloads.
+These commands require CLI 0.3.0 or newer; v0.2.0 and earlier lack them. Check `projects --help` and `keys --help`. They use the saved login Session and do not need DuckDB or data downloads.
 
 ```sh
 logcove projects create --name "Backend logs" --description "HTTP requests"

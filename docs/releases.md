@@ -2,13 +2,21 @@
 
 ## Status and scope
 
+### v0.3.0 preparation (2026-09-17)
+
+Version 0.3.0 is prepared in the working tree; no v0.3.0 tag or Release has been published by this preparation. The README and user guides target this version. [Release notes and upgrade instructions](release-notes/v0.3.0.md) cover the default production API, Project/Key management, local download reuse, definition-only Charts, and the updated Skill. The publishing workflow reads this versioned notes file, including when retrying an existing draft.
+
+Homebrew/WinGet publication and repository visibility changes remain separate actions. Preparing a release does not enable public package-manager installation.
+
+Local source checks passed: 78 Rust tests (one real OS credential test remains explicitly ignored), strict Clippy and formatting, seven packaging tests, two Skill checks and two publishing-workflow tests. A native macOS ARM64 release build passed. The other four platform builds and the hosted v0.3.0 workflow remain to be verified at the release commit.
+
 The [v0.2.0 release](https://github.com/logcove/logcove-public/releases/tag/v0.2.0) packages five prebuilt CLI archives, the matching Skill ZIP, Homebrew/WinGet metadata and SHA256SUMS. Users install downloaded binaries; source builds are documented in the [development guide](development.md). All five platform jobs and the Skill/release checks passed on GitHub Actions for commit `90ccde0` on 2026-09-09; see the hosted validation record below. The release workflow also runs the full checks at its own tagged commit. Hosted runner checks do not replace fresh-machine installation or real browser/credential-store acceptance.
 
 The original batch 2 installation/update-script plan is superseded by Homebrew and WinGet distribution plus a bundled Skill installer. Fresh-environment package-manager installation remains pending. There is no self-update command, automatic Skill updater, bundled DuckDB, or code signing/notarization.
 
 Version 0.2.0 adds the bundled `skills install` command and Homebrew/WinGet metadata generation. Metadata is prepared privately; neither a public tap nor a WinGet submission is created before product launch. There is no npm distribution. See [package-manager distribution](package-managers.md).
 
-The current source defaults to `https://api.logcove.com` and preserves flag, environment and saved-origin overrides. This change is pending release; published v0.1.0 and v0.2.0 still require explicit configuration. The README quick start describes the upcoming release's direct login flow. Publishing a CLI release does not deploy the API.
+Version 0.3.0 defaults to `https://api.logcove.com` and preserves flag, environment and saved-origin overrides. Published v0.1.0 and v0.2.0 require explicit configuration. Publishing a CLI release does not deploy the API.
 
 ## Version and targets
 
@@ -53,17 +61,17 @@ Branch and PR runs upload the same package format as Actions artifacts, retained
 Starting with version `0.2.0`, a complete release has seven archives plus one checksum file (the released `0.1.0` has no package-manager metadata archive):
 
 ```text
-logcove-v0.2.0-aarch64-apple-darwin.tar.gz
-logcove-v0.2.0-x86_64-apple-darwin.tar.gz
-logcove-v0.2.0-x86_64-unknown-linux-gnu.tar.gz
-logcove-v0.2.0-aarch64-unknown-linux-gnu.tar.gz
-logcove-v0.2.0-x86_64-pc-windows-msvc.zip
-logcove-skills-v0.2.0.zip
-logcove-package-managers-v0.2.0.zip
+logcove-v0.3.0-aarch64-apple-darwin.tar.gz
+logcove-v0.3.0-x86_64-apple-darwin.tar.gz
+logcove-v0.3.0-x86_64-unknown-linux-gnu.tar.gz
+logcove-v0.3.0-aarch64-unknown-linux-gnu.tar.gz
+logcove-v0.3.0-x86_64-pc-windows-msvc.zip
+logcove-skills-v0.3.0.zip
+logcove-package-managers-v0.3.0.zip
 SHA256SUMS
 ```
 
-Each CLI archive has a `logcove-v<version>-<target>/` root containing its executable, LICENSE, README.txt, the user-facing README.md, matching public documentation and the small `skills/logcove/` source folder. AGENTS.md is included for the development guide's reference. This keeps documentation and Skill installation instructions usable after extraction. The separate Skill ZIP supports users who only need the Skill; it contains a directly installable `logcove/` folder with SKILL.md, all three references, LICENSE and VERSION. Install the complete folder using [Skill installation](skills.md).
+Each CLI archive has a `logcove-v<version>-<target>/` root containing its executable, LICENSE, README.txt, the user-facing README.md, matching public documentation and the small `skills/logcove/` source folder. AGENTS.md is included for the development guide's reference. This keeps documentation and Skill installation instructions usable after extraction. The separate Skill ZIP supports users who only need the Skill; it contains a directly installable `logcove/` folder with SKILL.md, all four references, LICENSE and VERSION. Install the complete folder using [Skill installation](skills.md).
 
 Check downloaded archives against SHA256SUMS before use (`sha256sum` on Linux, `shasum -a 256` on macOS, or `Get-FileHash -Algorithm SHA256` on Windows). These hashes detect file mismatch; they are not a substitute for platform code signing. Downloaded unsigned executables may have a different OS launch experience from local builds; fresh-machine verification and signing decisions remain batch 2 work.
 
@@ -73,9 +81,9 @@ Check downloaded archives against SHA256SUMS before use (`sha256sum` on Linux, `
 2. Explicitly authorize and push the matching version tag. Branch pushes and manual CI runs never publish releases.
 3. `release.yml` validates the tag before running the shared checks at that commit. Every target and the Skill job must pass.
 4. The publish job downloads artifacts from that workflow run, requires exactly the seven expected archives, and writes SHA256SUMS. Only this job gets `contents: write` via GitHub's built-in token; no personal access token is needed. Package-manager metadata remains a Release asset until separately published to the relevant channel.
-5. Create a draft Release with generated notes, upload all assets, then make it public. A failed upload leaves a draft; rerunning the job can replace assets in that draft. An already public Release is never overwritten by this workflow. To correct a published version, publish a new version.
+5. Require a nonempty `docs/release-notes/v<version>.md`, create a draft Release with those notes, upload all assets, then publish it. A failed upload leaves a draft; rerunning the job can replace assets and refresh notes in that draft. An already published Release is never overwritten by this workflow. To correct a published version, publish a new version.
 
-Only jobs within the same run supply release artifacts. Do not move or recreate release tags; fix failures through a workflow rerun on the unchanged tag or a new version. Generated notes summarize merged changes; maintainers should describe user-visible changes and known limitations in commit/PR descriptions.
+Only jobs within the same run supply release artifacts. Do not move or recreate release tags; fix failures through a workflow rerun on the unchanged tag or a new version. Maintain the versioned release notes with user-visible changes, upgrade instructions and known limitations before tagging.
 
 The brief draft phase is an upload staging step, not another manual approval gate. Pushing the version tag is the publishing action. This implementation alone does not authorize pushing tags or publishing any release.
 

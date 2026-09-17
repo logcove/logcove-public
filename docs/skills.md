@@ -4,11 +4,11 @@ The instruction-only Skill is in [`skills/logcove`](../skills/logcove/SKILL.md).
 
 ## Prerequisites
 
-- Install the [prebuilt CLI](../README.md#install), and ensure `logcove` is on the agent's PATH. Its archive includes the matching `skills/logcove/` folder; the Skill is also available as a [standalone ZIP](https://github.com/logcove/logcove-public/releases/download/v0.2.0/logcove-skills-v0.2.0.zip).
-- Configure your actual API origin and complete `logcove login`. See [CLI usage](cli.md) for browser authorization and OS credential-store requirements.
+- Install the [prebuilt CLI](../README.md#install), and ensure `logcove` is on the agent's PATH. Its archive includes the matching `skills/logcove/` folder; the Skill is also available as a [standalone ZIP](https://github.com/logcove/logcove-public/releases/download/v0.3.0/logcove-skills-v0.3.0.zip).
+- Complete `logcove login`; CLI 0.3.0 defaults to the production service. See [CLI usage](cli.md) for browser authorization and OS credential-store requirements.
 - Provide a local DuckDB environment. Either the DuckDB CLI or Python package can be used; the Skill's examples use Python's `duckdb` package. A renderer is optional for local preview but necessary before claiming visual verification or image export.
 
-The Skill can guide login, Project/Key management and source selection, but it does not supply a hosted Logcove deployment or create an account. The new management workflow requires the current source CLI and is not in published v0.2.0. Created write keys go to private local files; the Agent uses the returned path without exposing the secret. A future container can reuse the instructions with suitable dependencies and its own authorized identity; noninteractive container authentication is not implemented here.
+The Skill can guide login, Project/Key management and source selection, but it does not supply a hosted Logcove deployment or create an account. The management workflow requires CLI 0.3.0 or newer. Created write keys go to private local files; the Agent uses the returned path without exposing the secret. A future container can reuse the instructions with suitable dependencies and its own authorized identity; noninteractive container authentication is not implemented here.
 
 ## Install with the CLI (0.2.0+)
 
@@ -29,7 +29,7 @@ logcove skills install --agent codex --force
 
 The command returns JSON with the selected agent, installed path, bundled version, and `installed`/`unchanged` status. CLI upgrades do not silently change an agent's installed Skill. API configuration, sessions and API-key permissions are not involved.
 
-CLI 0.1.0 does not have this command. Upgrade to 0.2.0 or use the manual installation below.
+CLI 0.1.0 does not have this command. Upgrade to 0.3.0 or newer to use the current Skill.
 
 ## Install from a CLI package or checkout
 
@@ -90,7 +90,7 @@ Replace the example day/source with actual available data. A task may span multi
 
 The Skill supports creating Charts and updating existing ones, saving definitions while keeping computation results local. It does not add scheduled refresh, alerts, a dashboard, or image-export commands to the CLI.
 
-For analysis, the Skill first checks completed local manifests. Recalculating an existing snapshot reuses its files directly. Refreshing or extending coverage uses `data pull --reuse-manifest <path>` (repeatable) to list current objects and download only missing or changed files. Each successful pull produces a complete, self-contained manifest with reused files copied locally; it does not append duplicate rows from earlier snapshots. This CLI option is implemented in source, not yet in the published v0.2.0 binary. Older installations must be upgraded before the Skill can use file-level reuse.
+For analysis, the Skill first checks completed local manifests. Recalculating an existing snapshot reuses its files directly. Refreshing or extending coverage uses `data pull --reuse-manifest <path>` (repeatable) to list current objects and download only missing or changed files. Each successful pull produces a complete, self-contained manifest with reused files copied locally; it does not append duplicate rows from earlier snapshots. This CLI option requires version 0.3.0 or newer. Older installations must be upgraded before the Skill can use file-level reuse.
 
 ## Repository structure
 

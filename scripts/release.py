@@ -3,6 +3,7 @@
 import argparse
 import hashlib
 import json
+import os
 from pathlib import Path
 import re
 import shlex
@@ -89,13 +90,16 @@ def package_cli(value, target, output):
             "package-managers.md",
         ):
             shutil.copy2(ROOT / "docs" / document, staging / "docs" / document)
+        (staging / "docs/release-notes").mkdir()
+        shutil.copy2(ROOT / f"docs/release-notes/v{value}.md", staging / f"docs/release-notes/v{value}.md")
         copy_skill(staging / "skills/logcove")
         (staging / "README.txt").write_text(
             f"Logcove {value} ({target})\n\n"
             "Place logcove (logcove.exe on Windows) in a directory on your PATH.\n"
             "Run logcove --version to verify installation.\n"
-            "Configure your deployed API with logcove config set-api-url <origin>,\n"
-            "then run logcove login. No default API is built into this version.\n"
+            "Run logcove login to sign in to Logcove in your browser.\n"
+            "Install the bundled Skill with logcove skills install --agent codex\n"
+            "or logcove skills install --agent claude.\n"
             "See README.md for installation and quick start; docs/ has detailed guides.\n"
             "DuckDB is installed separately. Linux login requires an unlocked\n"
             "Secret Service. These archives are not code-signed or notarized.\n",
@@ -121,11 +125,15 @@ def package_cli(value, target, output):
                             check=True, stdout=subprocess.DEVNULL,
                         )
         # A separate config directory keeps smoke checks independent of local login state.
+        smoke_env = os.environ.copy()
+        smoke_env.pop("LOGCOVE_API_URL", None)
+        smoke_env.pop("LOGCOVE_CONFIG_DIR", None)
         result = subprocess.check_output(
             [str(installed), "--config-dir", str(Path(temporary) / "config"), "config", "show"],
-            text=True,
+            text=True, env=smoke_env,
         )
-        json.loads(result)["data"]
+        if json.loads(result)["data"]["api_url"] != "https://api.logcove.com":
+            raise ValueError("Fresh installation must use the production API by default")
     return archive
 
 

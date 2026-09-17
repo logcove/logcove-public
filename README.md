@@ -6,17 +6,17 @@ Download Parquet from your data sources, explore logs across Projects, and gener
 
 ## Install
 
-Download the **v0.2.0** package for your computer. No Rust toolchain or source checkout is needed.
+Download the **v0.3.0** package for your computer. No Rust toolchain or source checkout is needed.
 
 | System | Download |
 | --- | --- |
-| macOS, Apple Silicon (M-series) | [macOS ARM64](https://github.com/logcove/logcove-public/releases/download/v0.2.0/logcove-v0.2.0-aarch64-apple-darwin.tar.gz) |
-| macOS, Intel | [macOS x64](https://github.com/logcove/logcove-public/releases/download/v0.2.0/logcove-v0.2.0-x86_64-apple-darwin.tar.gz) |
-| Linux, x64 | [Linux x64](https://github.com/logcove/logcove-public/releases/download/v0.2.0/logcove-v0.2.0-x86_64-unknown-linux-gnu.tar.gz) |
-| Linux, ARM64 | [Linux ARM64](https://github.com/logcove/logcove-public/releases/download/v0.2.0/logcove-v0.2.0-aarch64-unknown-linux-gnu.tar.gz) |
-| Windows, x64 | [Windows x64](https://github.com/logcove/logcove-public/releases/download/v0.2.0/logcove-v0.2.0-x86_64-pc-windows-msvc.zip) |
+| macOS, Apple Silicon (M-series) | [macOS ARM64](https://github.com/logcove/logcove-public/releases/download/v0.3.0/logcove-v0.3.0-aarch64-apple-darwin.tar.gz) |
+| macOS, Intel | [macOS x64](https://github.com/logcove/logcove-public/releases/download/v0.3.0/logcove-v0.3.0-x86_64-apple-darwin.tar.gz) |
+| Linux, x64 | [Linux x64](https://github.com/logcove/logcove-public/releases/download/v0.3.0/logcove-v0.3.0-x86_64-unknown-linux-gnu.tar.gz) |
+| Linux, ARM64 | [Linux ARM64](https://github.com/logcove/logcove-public/releases/download/v0.3.0/logcove-v0.3.0-aarch64-unknown-linux-gnu.tar.gz) |
+| Windows, x64 | [Windows x64](https://github.com/logcove/logcove-public/releases/download/v0.3.0/logcove-v0.3.0-x86_64-pc-windows-msvc.zip) |
 
-Extract the archive and open a terminal in the extracted `logcove-v0.2.0-...` folder. It contains the CLI, the Skill, and usage guides. [Release notes](https://github.com/logcove/logcove-public/releases/tag/v0.2.0) and [SHA-256 checksums](https://github.com/logcove/logcove-public/releases/download/v0.2.0/SHA256SUMS) are available with the download.
+Extract the archive and open a terminal in the extracted `logcove-v0.3.0-...` folder. It contains the CLI, the Skill, and usage guides. [Release notes](https://github.com/logcove/logcove-public/releases/tag/v0.3.0) and [SHA-256 checksums](https://github.com/logcove/logcove-public/releases/download/v0.3.0/SHA256SUMS) are available with the download.
 
 **macOS / Linux**
 
@@ -45,8 +45,6 @@ Linux login requires a running, unlocked Secret Service; see [credential storage
 For analysis, you also need Codex or Claude Code and a local [DuckDB](https://duckdb.org/docs/installation/) CLI or Python environment. DuckDB is installed separately from Logcove.
 
 ## Quick start
-
-This streamlined workflow is implemented in the current source and will ship in the next release. For published v0.2.0 compatibility, see the [CLI reference](docs/cli.md).
 
 ### 1. Sign in
 
@@ -78,7 +76,7 @@ logcove skills install --agent codex
 logcove skills install --agent claude
 ```
 
-Start a new agent session if the Skill is not visible. If an older or customized copy is installed, review your changes and rerun with `--force` to replace bundled files. Extra user files are preserved. A [standalone Skill ZIP](https://github.com/logcove/logcove-public/releases/download/v0.2.0/logcove-skills-v0.2.0.zip) and [manual installation instructions](docs/skills.md#install-from-a-cli-package-or-checkout) are also available.
+Start a new agent session if the Skill is not visible. If an older or customized copy is installed, review your changes and rerun with `--force` to replace bundled files. Extra user files are preserved. A [standalone Skill ZIP](https://github.com/logcove/logcove-public/releases/download/v0.3.0/logcove-skills-v0.3.0.zip) and [manual installation instructions](docs/skills.md#install-from-a-cli-package-or-checkout) are also available.
 
 ### 3. Ask about your logs
 
@@ -102,11 +100,11 @@ The agent uses the CLI to download your data and DuckDB to calculate locally. Wh
 Create a chart from this analysis and save it to Logcove.
 ```
 
-Saving a chart uploads its SQL, Vega-Lite specification and metadata. Results stay local; the web or desktop application calculates the selected time range on your device. Definition-only Charts require the upcoming CLI/API version; published v0.2.0 still uses the previous result contract. You can also use the CLI directly; see the [download and Chart walkthrough](docs/cli.md#download-parquet).
+Saving a chart uploads its SQL, Vega-Lite specification and metadata. Results stay local; the web or desktop application calculates the selected time range on your device. You can also use the CLI directly; see the [download and Chart walkthrough](docs/cli.md#download-parquet).
 
 ## Guides
 
-The current source also supports [Project and write-key management](docs/cli.md#manage-projects-and-write-keys). Newly created Key secrets are saved to a private local file; commands return its path. These management commands are not included in the published v0.2.0 packages yet.
+The CLI also supports [Project and write-key management](docs/cli.md#manage-projects-and-write-keys). Newly created Key secrets are saved to a private local file; commands return its path.
 
 - [CLI reference](docs/cli.md): configuration, login, Project/Key management, downloads and chart commands.
 - [Skill guide](docs/skills.md): installation, analysis workflow and usage examples.
