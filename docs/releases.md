@@ -2,6 +2,22 @@
 
 ## Status and scope
 
+### v0.3.0 replacement (2026-09-19)
+
+The maintainer explicitly requested replacing v0.3.0 with the personal-token CLI
+and updated Skill. This is a one-time exception to the immutable-release policy
+below; the workflow's published-release protection remains unchanged. The rebuild
+keeps version 0.3.0, so users must replace the binary and check `--help` for
+`LOGCOVE_TOKEN`, then reinstall the bundled Skill. Original v0.3.0 binaries ignore
+that environment variable. See the [updated release notes](release-notes/v0.3.0.md).
+
+The replacement procedure backs up the old assets and tag, converts the Release
+to a draft, updates the tag to the reviewed commit, and runs all five targets and
+Skill checks before publishing replacement assets and fresh package-manager hashes.
+Completion must be verified from the new hosted run and downloaded Release assets.
+This CLI release does not deploy the API/app; PAT use requires that separate
+deployment. Repository visibility and public package-manager publication are unchanged.
+
 ### v0.3.0 preparation (2026-09-17)
 
 Version 0.3.0 is prepared in the working tree; no v0.3.0 tag or Release has been published by this preparation. The README and user guides target this version. [Release notes and upgrade instructions](release-notes/v0.3.0.md) cover the default production API, Project/Key management, local download reuse, definition-only Charts, and the updated Skill. The publishing workflow reads this versioned notes file, including when retrying an existing draft.

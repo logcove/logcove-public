@@ -105,11 +105,27 @@ pub struct Api<S: CredentialStore> {
     pub(crate) origin: Url,
     pub(crate) store: S,
     pub(crate) token: Option<String>,
+    environment_token: bool,
     http: Client,
 }
 
 impl<S: CredentialStore> Api<S> {
     pub fn new(origin: Url, store: S) -> Result<Self> {
+        Self::with_environment_token(origin, store, None)
+    }
+
+    pub fn with_environment_token(origin: Url, store: S, token: Option<String>) -> Result<Self> {
+        if let Some(value) = &token {
+            if !value.strip_prefix("lc_pat_").is_some_and(|secret| {
+                secret.len() == 64
+                    && secret
+                        .bytes()
+                        .all(|b| b.is_ascii_digit() || (b'a'..=b'f').contains(&b))
+            }) {
+                return Err(Error::new("INVALID_TOKEN", "LOGCOVE_TOKEN must be a personal access token (lc_pat_), not a write key or Session. No local login fallback was used."));
+            }
+        }
+        let environment_token = token.is_some();
         let origin = config::origin(origin.as_str())?;
         let mut builder = Client::builder()
             .redirect(Policy::none())
@@ -122,17 +138,29 @@ impl<S: CredentialStore> Api<S> {
         let http = builder.build().map_err(|_| {
             Error::new("HTTP_CLIENT_ERROR", "Could not initialize the HTTP client.")
         })?;
-        let token = store.read()?;
+        let token = if environment_token {
+            token
+        } else {
+            store.read()?
+        };
         Ok(Self {
             origin,
             store,
             token,
+            environment_token,
             http,
         })
     }
 
     pub fn has_session(&self) -> bool {
         self.token.is_some()
+    }
+
+    pub(crate) fn require_session_mode(&self) -> Result<()> {
+        if self.environment_token {
+            return Err(Error::new("ENV_TOKEN_ACTIVE", "LOGCOVE_TOKEN is active. Unset it before browser login or session logout. To revoke this token, use Personal tokens in the Logcove app."));
+        }
+        Ok(())
     }
 
     pub(crate) fn request(
@@ -217,6 +245,14 @@ impl<S: CredentialStore> Api<S> {
         body: Option<&Value>,
     ) -> Result<Reply> {
         let reply = self.request(method, path, query, body, true, None)?;
+        if self.environment_token {
+            if reply.status == 401 {
+                let mut error = Error::new("UNAUTHENTICATED", "LOGCOVE_TOKEN was rejected. Check or replace it in your secret store. No local login fallback was used.");
+                error.request_id = reply.request_id;
+                return Err(error);
+            }
+            return Ok(reply);
+        }
         if reply.status == 401 {
             if let Some(token) = self.token.take() {
                 if let Err(error) = self.store.delete_if_matches(&token) {
@@ -282,6 +318,7 @@ impl<S: CredentialStore> Api<S> {
     }
 
     pub fn logout(&mut self) -> Result<()> {
+        self.require_session_mode()?;
         if self.token.is_none() {
             return Ok(());
         }

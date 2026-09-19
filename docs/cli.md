@@ -70,7 +70,7 @@ Successful login prints account JSON only:
 
 ## Credential persistence
 
-The CLI uses a signed Bearer Session, not a JWT or a Vector write key. Credentials are stored in the OS credential service with service name `com.logcove.cli.session` and account equal to the canonical API origin.
+Browser login uses a signed Bearer Session, not a JWT or a Vector write key. Session credentials are stored in the OS credential service with service name `com.logcove.cli.session` and account equal to the canonical API origin.
 
 | Platform | Backend | Requirement |
 | --- | --- | --- |
@@ -84,7 +84,7 @@ The CLI saves changed `set-auth-token` headers returned by authenticated request
 
 Credential writes and conditional deletion share a short cross-process file lock under the OS local-data directory at `logcove/credentials.lock`. The file contains no credential; the Session remains in the OS credential store. The lock also covers CLI invocations using different config directories.
 
-If the initial login credential cannot be saved, login fails and attempts to revoke the newly issued session. It does not claim a persistent login succeeded. There is no automatic plaintext fallback. Headless noninteractive credentials are outside batch 1.
+If the initial login credential cannot be saved, login fails and attempts to revoke the newly issued session. It does not claim a persistent login succeeded. There is no automatic plaintext fallback. Headless noninteractive PAT authentication is described below; it does not use a credential store.
 
 ```sh
 logcove logout
@@ -115,7 +115,7 @@ logcove projects create --name "OTel logs" --ingestion-protocol otlp_http
 
 Use `--ingestion-protocol http_json` for ordinary JSON. `projects update` does not accept the protocol; create a different Project to change formats. The same write Key may bind Projects of different protocols, but each request must use the matching Project and protocol endpoint. This flag requires CLI 0.3.0 and an API with OTLP Project support. A created OTLP Project alone does not prove its collector endpoint is deployed. Use the endpoint supplied by that environment, never guess it from the API host.
 
-All commands authenticate using the CLI's stored Session. Write keys authenticate Vector ingestion only; they cannot log in to the CLI or read data.
+Business commands authenticate using `LOGCOVE_TOKEN` when set, or the CLI's stored Session otherwise (PAT support requires the rebuilt v0.3.0 and a compatible API deployment). Write keys authenticate Vector ingestion only; they cannot log in to the CLI or read data.
 
 ```sh
 logcove projects create --name "API logs" --description "Backend request logs"
@@ -172,7 +172,7 @@ logcove data pull prj_00000000-0000-4000-8000-000000000001 \
 
 Dates are inclusive UTC **ingestion partitions**, with a maximum range of 93 days. They do not filter event timestamps within a file. Inspect the schema and apply an event-time predicate in DuckDB if your question needs one. An archived or inaccessible Project cannot be downloaded.
 
-The CLI follows all file-list pages and requests signed links in batches of at most 20 keys (also bounded by the API's request size). It streams up to four files concurrently by default, using shared connection pools for the pull. Use `--concurrency 1` for sequential downloads or choose any value from 1 to 8. File listing, signing, and Session handling remain on the main thread; only storage downloads run concurrently. The next signing batch starts after the current batch finishes. Loopback downloads bypass proxies; remote downloads use reqwest's normal proxy support. File bytes come directly from object storage without the user's Session attached. Download progress goes to stderr; stdout contains:
+The CLI follows all file-list pages and requests signed links in batches of at most 20 keys (also bounded by the API's request size). It streams up to four files concurrently by default, using shared connection pools for the pull. Use `--concurrency 1` for sequential downloads or choose any value from 1 to 8. File listing, signing, and Session handling remain on the main thread; only storage downloads run concurrently. The next signing batch starts after the current batch finishes. Loopback downloads bypass proxies; remote downloads use reqwest's normal proxy support. File bytes come directly from object storage without the user's Session or personal token attached. Download progress goes to stderr; stdout contains:
 
 ```json
 {"data":{"project_id":"prj_00000000-0000-4000-8000-000000000001","manifest_path":"/your/output/pull-1788825600000000000-1234/manifest.json","file_count":1,"total_bytes":1024}}
@@ -285,7 +285,7 @@ Normal results are JSON on stdout. Login instructions and warnings use stderr. R
 
 API errors include a request ID when the server supplies one. The CLI does not print raw HTTP error bodies, request headers, access tokens, or credential-store error details. HTTP redirects are refused; configure the final API origin instead.
 
-Common codes include `INVALID_API_URL`, `UNAUTHENTICATED`, `ACCESS_DENIED`, `NOT_FOUND`, `RATE_LIMITED`, `NETWORK_ERROR`, `SERVER_ERROR`, `AUTHORIZATION_DENIED`, `AUTHORIZATION_EXPIRED`, and credential-store errors. Download/input failures additionally include `INVALID_DATE_RANGE`, `FILE_ERROR`, `DOWNLOAD_FAILED`, `DOWNLOAD_DENIED`, `OBJECT_CHANGED`, `INVALID_PARQUET`, `INVALID_INPUT`, and `PAYLOAD_TOO_LARGE`. Only authentication failure is a reason to log in again; a 403 or 5xx does not mean the Session expired.
+Common codes include `INVALID_API_URL`, `UNAUTHENTICATED`, `ACCESS_DENIED`, `NOT_FOUND`, `RATE_LIMITED`, `NETWORK_ERROR`, `SERVER_ERROR`, `AUTHORIZATION_DENIED`, `AUTHORIZATION_EXPIRED`, and credential-store errors. Download/input failures additionally include `INVALID_DATE_RANGE`, `FILE_ERROR`, `DOWNLOAD_FAILED`, `DOWNLOAD_DENIED`, `OBJECT_CHANGED`, `INVALID_PARQUET`, `INVALID_INPUT`, and `PAYLOAD_TOO_LARGE`. For Session mode, only authentication failure is a reason to log in again; a 403 or 5xx does not mean the Session expired. In token mode, correct `LOGCOVE_TOKEN` instead of starting browser login.
 
 ## Development checks
 
@@ -303,3 +303,37 @@ cargo test --locked --test native_credentials -- --ignored --nocapture
 ```
 
 Run that test only in a configured OS credential environment. CI performs build and mocked HTTP/credential checks on macOS, Linux, and Windows; it does not assume hosted runners have an unlocked desktop keyring. Actual verification results are recorded in [validation.md](validation.md).
+
+
+## Personal tokens for automation
+
+The rebuilt v0.3.0 supports `LOGCOVE_TOKEN`; the original v0.3.0 binaries do not.
+Check root `logcove --help` for `LOGCOVE_TOKEN` before authenticated commands;
+replace older binaries even if `--version` already says 0.3.0.
+The API/app must also have personal-token support deployed before use. Publishing
+this CLI does not deploy the service; browser Session login remains available.
+
+Create a named token under **Personal tokens** in the app. Its secret appears once;
+store it in your CI or remote agent secret store and inject it as `LOGCOVE_TOKEN`.
+Run `logcove whoami` to verify the account, then use normal Projects, Keys, Charts
+and Data commands. No browser login or Linux Secret Service is needed in this mode.
+
+```yaml
+# After installing a CLI version that supports personal tokens:
+- name: List Logcove projects
+  env:
+    LOGCOVE_TOKEN: ${{ secrets.LOGCOVE_TOKEN }}
+  run: logcove projects list
+```
+
+All tokens grant Full access to the owner's business resources, without bypassing
+quotas or retention. They cannot manage personal tokens, account security or billing.
+They have no automatic expiry; revoke individual tokens in the app. Collector
+write keys remain separate and cannot be used as `LOGCOVE_TOKEN`.
+
+Credential precedence: `LOGCOVE_TOKEN` before the saved Session. The environment
+credential is never persisted, renewed or printed. Invalid/empty values fail with
+`INVALID_TOKEN`; rejected values return `UNAUTHENTICATED` without deleting or using
+a saved Session. Token mode ignores Session-renewal headers. `login`/`logout` fail
+with `ENV_TOKEN_ACTIVE`; unset the variable to operate on the saved browser Session.
+Unsetting it or logging out of a Session does not revoke the PAT.

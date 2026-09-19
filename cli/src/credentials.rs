@@ -37,13 +37,16 @@ fn write_lock() -> Result<File> {
     Ok(file)
 }
 
-pub struct OsCredentials(Entry);
+pub struct OsCredentials(String);
 
 impl OsCredentials {
     pub fn new(origin: &str) -> Result<Self> {
-        Entry::new(SERVICE, origin)
-            .map(Self)
-            .map_err(|_| storage_error("open"))
+        Ok(Self(origin.to_owned()))
+    }
+
+    // Headless token invocations never initialize the system credential service.
+    fn entry(&self) -> Result<Entry> {
+        Entry::new(SERVICE, &self.0).map_err(|_| storage_error("open"))
     }
 }
 
@@ -54,7 +57,7 @@ fn storage_error(operation: &str) -> Error {
 
 impl CredentialStore for OsCredentials {
     fn read(&self) -> Result<Option<String>> {
-        match self.0.get_password() {
+        match self.entry()?.get_password() {
             Ok(value) => Ok(Some(value)),
             Err(KeyringError::NoEntry) => Ok(None),
             Err(_) => Err(storage_error("read")),
@@ -63,7 +66,7 @@ impl CredentialStore for OsCredentials {
 
     fn save(&self, token: &str) -> Result<()> {
         let _lock = write_lock()?;
-        self.0
+        self.entry()?
             .set_password(token)
             .map_err(|_| storage_error("save"))
     }
@@ -84,7 +87,7 @@ impl CredentialStore for OsCredentials {
 
 impl OsCredentials {
     fn delete_entry(&self) -> Result<()> {
-        match self.0.delete_credential() {
+        match self.entry()?.delete_credential() {
             Ok(()) | Err(KeyringError::NoEntry) => Ok(()),
             Err(_) => Err(storage_error("delete")),
         }

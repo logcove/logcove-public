@@ -44,6 +44,7 @@ impl Clock for SystemClock {
 
 impl<S: CredentialStore> Api<S> {
     pub fn begin_login(&self) -> Result<Authorization> {
+        self.require_session_mode()?;
         let authorization = self
             .request(
                 Method::POST,
@@ -77,6 +78,7 @@ impl<S: CredentialStore> Api<S> {
         authorization: &Authorization,
         clock: &mut impl Clock,
     ) -> Result<()> {
+        self.require_session_mode()?;
         let expiry = Duration::from_secs(authorization.expires_in);
         let mut interval = Duration::from_secs(authorization.interval);
         loop {

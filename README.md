@@ -60,6 +60,8 @@ logcove projects list
 
 Each Project in the list is a data source you can explore.
 
+For CI and remote agents, the rebuilt v0.3.0 supports personal tokens through `LOGCOVE_TOKEN`, when enabled by your API deployment. Original v0.3.0 binaries need replacing; check `logcove --help` for `LOGCOVE_TOKEN`. See [automation authentication](docs/cli.md#personal-tokens-for-automation).
+
 ### 2. Install the Skill
 
 Run the command for your agent on macOS, Linux or Windows. The Skill is bundled in the CLI; installation does not require a separate download or login.

@@ -7,15 +7,23 @@ Use this reference for Logcove operations. All commands assume a compatible `log
 ```sh
 logcove --version
 logcove config show
-logcove whoami
-logcove login
 ```
+
+Before `logcove whoami` or another authenticated command, check whether `LOGCOVE_TOKEN` exists in the environment, including when empty; reveal only its presence, never its value. If set, check root `logcove --help` for `LOGCOVE_TOKEN` first. If help lacks it, stop and require a CLI update: older binaries silently ignore the variable and may authenticate as the saved Session's account. Do not use a successful `whoami` or a version number as proof of token support.
+
+Once this check passes, run `logcove whoami`. Only when `LOGCOVE_TOKEN` is absent and the response is `UNAUTHENTICATED`, use `logcove login` for browser approval.
 
 The CLI defaults to `https://api.logcove.com`; ordinary users can run `logcove login` without configuring an address. Use `logcove config show` to check the effective origin and preserve an existing override. Only configure another origin when the user selects a development or other deployment. Precedence is flag, `LOGCOVE_API_URL`, saved configuration, then the production default. `--api-url <origin>` overrides the target for one invocation; use it consistently throughout the task. Published v0.2.0 predates this default: if it reports `API_NOT_CONFIGURED`, explain that the CLI needs an update; do not ask ordinary users to invent or supply an API address.
 
-Login uses a signed Bearer Session, not a JWT or Vector write key. The CLI stores it in the OS credential service, independently of the desktop app. Do not read the keychain, request a Session token from the user, put Session tokens in shell commands, or build Session Authorization headers. Log ingestion uses a separate write-key header as described in [ingestion.md](ingestion.md).
+Browser login uses a signed Bearer Session, not a JWT or Vector write key. The CLI stores it in the OS credential service, independently of the desktop app. Do not read the keychain, request a Session token from the user, put Session tokens in shell commands, or build Session Authorization headers. Log ingestion uses a separate write-key header as described in [ingestion.md](ingestion.md).
 
 `logcove login --no-browser` prints a link and waits for browser approval. A localhost link requires the associated local web application. An expired or denied request needs a new login attempt, not repeated approval of the old link. Do not log out or change accounts merely to diagnose a download error.
+
+### CI and remote agents
+
+A CLI version with personal-token support accepts `LOGCOVE_TOKEN` from the user's environment or CI secret store. The rebuilt v0.3.0 supports it, but original v0.3.0 binaries do not; follow the compatibility check above before making authenticated requests. The selected API deployment must also support PATs. With a supported CLI, run `logcove whoami` directly, without `login`. The token identifies an account and grants Full access to its business resources, subject to existing ownership, quota and retention rules. It cannot access Billing, account-security endpoints or PAT management.
+
+Token mode bypasses the OS credential service, so Linux automation needs no desktop keyring. Invalid or empty environment values fail rather than falling back to a stored account. A 401 leaves stored Sessions untouched. `login` and `logout` return `ENV_TOKEN_ACTIVE` until the variable is unset; unsetting a variable does not revoke the token. Token creation and revocation are available in the app's Personal tokens page. Do not read environment secrets into tool output, copy them into prompts, or put them in command arguments.
 
 ## Discover and pull
 
@@ -66,7 +74,7 @@ logcove projects create --name "OTel logs" --ingestion-protocol otlp_http
 
 Use `--ingestion-protocol http_json` for ordinary JSON. `projects update` does not accept the protocol; create a different Project to change formats. The same write Key may bind Projects of different protocols, but each request must use the matching Project and protocol endpoint. This flag requires CLI 0.3.0 and an API with OTLP Project support. A created OTLP Project alone does not prove its collector endpoint is deployed. Use the endpoint supplied by that environment, never guess it from the API host.
 
-These commands require CLI 0.3.0 or newer; v0.2.0 and earlier lack them. Check `projects --help` and `keys --help`. They use the saved login Session and do not need DuckDB or data downloads.
+These commands require CLI 0.3.0 or newer; v0.2.0 and earlier lack them. Check `projects --help` and `keys --help`. They use `LOGCOVE_TOKEN` when supported and set, or the saved login Session, and do not need DuckDB or data downloads.
 
 ```sh
 logcove projects create --name "Backend logs" --description "HTTP requests"
@@ -110,7 +118,8 @@ Successful operations return JSON on stdout, usually under `data`. Help/version 
 
 | Failure | Next action |
 | --- | --- |
-| `UNAUTHENTICATED` | Authorize through `logcove login` for the same API environment |
+| `INVALID_TOKEN`, `ENV_TOKEN_ACTIVE` | Have the user correct `LOGCOVE_TOKEN` or explicitly choose Session mode; do not print or silently remove the variable |
+| `UNAUTHENTICATED` | If `LOGCOVE_TOKEN` is set, fix or replace it through the secret store; do not fall back. Otherwise use browser login. Preserve the selected account and API origin |
 | Credential-store errors | Report the OS-store requirement; Linux needs an unlocked Secret Service. Do not fall back to plaintext storage |
 | `ACCESS_DENIED`, `NOT_FOUND` | Check the selected account, resource, and environment; do not restart login automatically |
 | `NETWORK_ERROR`, `SERVER_ERROR`, `RATE_LIMITED` | Report the failure and request ID if present; retry reads only when appropriate, without an unbounded loop |

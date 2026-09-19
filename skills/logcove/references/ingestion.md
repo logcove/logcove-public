@@ -18,7 +18,7 @@ Get the actual complete ingestion URL from the selected environment's settings o
 Both protocols require:
 
 - `X-Project-ID`: the Project's full `prj_...` ID.
-- `Authorization: Bearer <write-key>`: the raw credential from the private key file, not the `key_...` resource ID, masked key, or CLI Session.
+- `Authorization: Bearer <write-key>`: the raw credential from the private key file, not the `key_...` resource ID, masked key, CLI Session, or personal access token.
 
 `ingestion.desired_revision` only records the requested configuration. Project creation, key binding, rotation, and revocation reach the collector asynchronously. Do not claim immediate readiness from a successful management command.
 

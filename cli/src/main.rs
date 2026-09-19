@@ -19,7 +19,8 @@ use std::{
 #[command(
     name = "logcove",
     version,
-    about = "Access Logcove from your local analysis workflow"
+    about = "Access Logcove from your local analysis workflow",
+    after_help = "For CI and remote agents, set LOGCOVE_TOKEN to a personal access token. It takes precedence over browser login and does not use the system credential store."
 )]
 struct Cli {
     /// API origin; overrides the environment and saved configuration
@@ -129,8 +130,21 @@ fn run(cli: Cli) -> Result<Value> {
         );
     }
     let origin = config::resolve(cli.api_url.as_deref(), &saved)?;
+    let token = match std::env::var("LOGCOVE_TOKEN") {
+        Ok(value) => Some(value),
+        Err(std::env::VarError::NotPresent) => None,
+        Err(_) => {
+            return Err(logcove::error::Error::new(
+                "INVALID_TOKEN",
+                "LOGCOVE_TOKEN must contain valid Unicode.",
+            ))
+        }
+    };
+    if token.is_some() && matches!(cli.command, Command::Login { .. } | Command::Logout) {
+        return Err(logcove::error::Error::new("ENV_TOKEN_ACTIVE", "LOGCOVE_TOKEN is active. Unset it before browser login or session logout. Revoke tokens from Personal tokens in the Logcove app."));
+    }
     let credentials = OsCredentials::new(&origin.origin().ascii_serialization())?;
-    let mut api = Api::new(origin, credentials)?;
+    let mut api = Api::with_environment_token(origin, credentials, token)?;
     match cli.command {
         Command::Login { no_browser } => {
             if api.has_session() {
