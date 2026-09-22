@@ -2,6 +2,18 @@
 
 ## Status and scope
 
+### Public distribution (2026-09-23)
+
+The repository is public. All seven v0.3.0 archives and SHA256SUMS were downloaded
+without GitHub authentication; every archive matched its published checksum.
+The September 19 replacement is the current released v0.3.0, including PAT support.
+Older entries below record the preparation state on their respective dates.
+
+The [agent installation guide](../INSTALL.md) supports installing a release binary
+and its bundled Skill. It is included in future CLI archives; existing release
+assets remain unchanged. Homebrew tap and WinGet publication have their own
+[status and remaining steps](package-managers.md).
+
 ### v0.3.0 replacement (2026-09-19)
 
 The maintainer explicitly requested replacing v0.3.0 with the personal-token CLI
@@ -30,7 +42,7 @@ The [v0.2.0 release](https://github.com/logcove/logcove-public/releases/tag/v0.2
 
 The original batch 2 installation/update-script plan is superseded by Homebrew and WinGet distribution plus a bundled Skill installer. Fresh-environment package-manager installation remains pending. There is no self-update command, automatic Skill updater, bundled DuckDB, or code signing/notarization.
 
-Version 0.2.0 adds the bundled `skills install` command and Homebrew/WinGet metadata generation. Metadata is prepared privately; neither a public tap nor a WinGet submission is created before product launch. There is no npm distribution. See [package-manager distribution](package-managers.md).
+Version 0.2.0 introduced the bundled `skills install` command and Homebrew/WinGet metadata generation. Those channels were deferred until product launch; see the current [package-manager distribution](package-managers.md) status. There is no npm distribution.
 
 Version 0.3.0 defaults to `https://api.logcove.com` and preserves flag, environment and saved-origin overrides. Published v0.1.0 and v0.2.0 require explicit configuration. Publishing a CLI release does not deploy the API.
 
@@ -50,12 +62,12 @@ Each job runs on its target architecture and uses Rust 1.90.0 with `--locked`. T
 
 Runner labels are from [GitHub-hosted runner documentation](https://docs.github.com/en/actions/reference/runners/github-hosted-runners). The repository must have Actions enabled and access to these runners, including ARM64 Linux.
 
-### Known installation limitations in 0.2.0
+### Known installation limitations carried forward from 0.2.0
 
 - The Windows MSVC executable depends on the x64 Visual C++ Runtime (`VCRUNTIME140.dll`). The prepared WinGet manifest does not yet declare that dependency; users need the runtime installed separately.
 - The Linux ARM64 release uses the Ubuntu 24.04/glibc 2.39 baseline. The 0.1.0 archive from this unchanged build configuration fails to start on Debian 12 with missing `GLIBC_2.38`/`GLIBC_2.39` errors. The Homebrew formula does not yet check that requirement, and installation on older glibc systems is unverified.
 
-These two compatibility fixes are deferred. Metadata generation does not make Homebrew or WinGet installation publicly available; the repository remains private until product launch.
+These two compatibility fixes remain deferred. They must be accounted for when publishing package-manager support; repository visibility alone does not resolve them.
 
 ## Checks and packaging
 
@@ -87,7 +99,7 @@ logcove-package-managers-v0.3.0.zip
 SHA256SUMS
 ```
 
-Each CLI archive has a `logcove-v<version>-<target>/` root containing its executable, LICENSE, README.txt, the user-facing README.md, matching public documentation and the small `skills/logcove/` source folder. AGENTS.md is included for the development guide's reference. This keeps documentation and Skill installation instructions usable after extraction. The separate Skill ZIP supports users who only need the Skill; it contains a directly installable `logcove/` folder with SKILL.md, all four references, LICENSE and VERSION. Install the complete folder using [Skill installation](skills.md).
+Each CLI archive has a `logcove-v<version>-<target>/` root containing its executable, LICENSE, README.txt, the user-facing README.md, matching public documentation and the small `skills/logcove/` source folder. AGENTS.md is included for the development guide's reference; future archives also include INSTALL.md. This keeps documentation and Skill installation instructions usable after extraction. The separate Skill ZIP supports users who only need the Skill; it contains a directly installable `logcove/` folder with SKILL.md, all four references, LICENSE and VERSION. Install the complete folder using [Skill installation](skills.md).
 
 Check downloaded archives against SHA256SUMS before use (`sha256sum` on Linux, `shasum -a 256` on macOS, or `Get-FileHash -Algorithm SHA256` on Windows). These hashes detect file mismatch; they are not a substitute for platform code signing. Downloaded unsigned executables may have a different OS launch experience from local builds; fresh-machine verification and signing decisions remain batch 2 work.
 

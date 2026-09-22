@@ -6,6 +6,21 @@ Download Parquet from your data sources, explore logs across Projects, and gener
 
 ## Install
 
+### Let your agent install it
+
+Paste this into Codex or Claude Code:
+
+```text
+Read https://raw.githubusercontent.com/logcove/logcove-public/main/INSTALL.md
+and install the Logcove CLI and the Logcove Skill for this agent.
+```
+
+The [installation guide](INSTALL.md) walks the agent through choosing a binary,
+checking its checksum, installing the bundled Skill, and verifying the setup.
+You approve browser login yourself; no credentials need to be pasted into chat.
+
+### Install manually
+
 Download the **v0.3.0** package for your computer. No Rust toolchain or source checkout is needed.
 
 | System | Download |
@@ -110,7 +125,7 @@ The CLI also supports [Project and write-key management](docs/cli.md#manage-proj
 
 - [CLI reference](docs/cli.md): configuration, login, Project/Key management, downloads and chart commands.
 - [Skill guide](docs/skills.md): installation, analysis workflow and usage examples.
-- [Homebrew and WinGet](docs/package-managers.md): availability and installation at product launch.
+- [Homebrew and WinGet](docs/package-managers.md): current availability and publication progress.
 - [Development guide](docs/development.md): source layout, checks and release procedures.
 
 ## License

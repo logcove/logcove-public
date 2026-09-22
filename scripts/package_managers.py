@@ -77,12 +77,12 @@ def generate(value, assets, output):
         f"# Logcove {value} package-manager metadata\n\n"
         "Generated from the corresponding CLI archives. URLs and SHA-256 hashes\n"
         "refer to those exact release assets. Generation does not publish to a package index.\n\n"
-        "After the product is public, copy Formula/logcove.rb to logcove/homebrew-tap,\n"
+        "Publish Formula/logcove.rb in logcove/homebrew-tap,\n"
         "then users can run `brew install logcove/tap/logcove`. Submit the manifests/\n"
         "directory to microsoft/winget-pkgs for review; after acceptance users can run\n"
         "`winget install --id Logcove.Logcove --exact --source winget`.\n\n"
-        "Both channels require anonymously downloadable release URLs. Keep this metadata\n"
-        "private while the product repository is private.\n",
+        "Both channels require anonymously downloadable release URLs. Verify those URLs\n"
+        "and test installation before announcing package-manager availability.\n",
         encoding="utf-8",
     )
     return output

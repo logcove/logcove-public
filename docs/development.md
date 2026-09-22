@@ -60,11 +60,11 @@ Skill and packaging checks use Python 3.12 or newer. Packaging uses the standard
 
 ## Implementation and release status
 
-Version 0.3.0 adds the default production API, Project/Key management, local download reuse and definition-only Charts. It retains the bundled Skill installer and Homebrew/WinGet metadata generation introduced in 0.2.0. The repository remains private and no package-index submission is configured; see [package-manager distribution](package-managers.md).
+Version 0.3.0 adds the default production API, Project/Key management, local download reuse and definition-only Charts. The September 19 rebuild also supports personal tokens. The repository is public and the release archives are anonymously downloadable. Homebrew/WinGet publication is tracked separately; see [package-manager distribution](package-managers.md).
 
 The CLI and shared analysis Skill are implemented. Five-platform CI, archive packaging and tag-triggered release automation are also implemented, with successful hosted checks for macOS ARM64/x64, Linux ARM64/x64 and Windows x64. A passing build does not establish real browser login, native credential-store behavior or installation on every supported desktop.
 
-The first binary release is `v0.1.0`, with five platform archives, a standalone Skill ZIP and SHA256SUMS. Homebrew/WinGet publication and fresh-environment installation tests remain pending; the README documents manual installation of released binaries. Do not push a version tag to test ordinary CI: tag pushes trigger publication after the checks pass.
+The current binary release is `v0.3.0`, with five platform archives, a standalone Skill ZIP, package-manager metadata and SHA256SUMS. The README documents manual installation and an [agent installation guide](../INSTALL.md). Do not push a version tag to test ordinary CI: tag pushes trigger publication after the checks pass.
 
 - [Implementation plan](implementation-plan.md): scope, responsibilities and delivery batches.
 - [CLI validation](validation.md): automated checks, live workflows and platform boundaries.

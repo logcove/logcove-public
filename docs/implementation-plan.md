@@ -82,15 +82,25 @@ In the following step, distribute prebuilt binaries via GitHub Releases and incl
 
 Distribution is split into two batches. Batch 1 implements shared CI, five native platform builds (macOS ARM64/x64, Linux ARM64/x64, Windows x64), matching CLI/Skill archives, checksums and tag-triggered Releases. Batch 2 uses Homebrew/WinGet for CLI installation and updates, adds a bundled Skill installer, and verifies installation in fresh environments. CLI and Skill share the Cargo version. See [release procedures](releases.md) for triggers, artifacts, runtime boundaries and publication prerequisites.
 
-The 2026-09-09 distribution decision selects Homebrew and WinGet only, with no npm package. Version 0.2.0 adds an embedded Skill installer and generates the package-manager metadata from actual archive hashes. The product repository stays private until launch; creation of a public tap, anonymous downloads and WinGet submission are deferred. No self-update daemon or extra CLI runtime dependency is introduced. See [package-manager distribution](package-managers.md).
+The 2026-09-09 distribution decision selects Homebrew and WinGet only, with no npm package. Version 0.2.0 adds an embedded Skill installer and generates the package-manager metadata from actual archive hashes. The repository became public on 2026-09-23, and anonymous downloads of all v0.3.0 release archives have been verified. Public tap creation and WinGet submission remain separate publication steps. No self-update daemon or extra CLI runtime dependency is introduced. See [package-manager distribution](package-managers.md).
 
-## Confirmed public origins (2026-09-08; deployment pending)
+## Production and local testing (2026-09-23)
 
-The production web application will use `https://app.logcove.com`, and the public user API will use `https://api.logcove.com`. The website will use `https://logcove.com`; `https://docs.logcove.com` is reserved for a future documentation site. The shared Vector ingestion endpoint will be `https://ingest.logcove.com/logs`, authenticated with Project ID and write key, separate from the CLI's Session-authenticated API.
+Production is deployed at these public addresses:
 
-The test web application and API will use `https://app-test.logcove.com` and `https://api-test.logcove.com`; test ingestion will use `https://ingest-test.logcove.com/logs`. These are agreed target addresses, not a claim that services are deployed or reachable.
+| Purpose | Address |
+| --- | --- |
+| Website | `https://logcove.com` |
+| Web application | `https://app.logcove.com` |
+| User API | `https://api.logcove.com` |
+| HTTP JSON log ingestion | `https://ingest.logcove.com/logs` |
+| OTLP HTTP Protobuf log ingestion | `https://ingest.logcove.com/v1/logs` |
 
-Update (2026-09-17): the source now includes `https://api.logcove.com` as the built-in fallback, after `--api-url`, `LOGCOVE_API_URL`, and the saved API origin. Upgrades preserve saved origins and origin-scoped credentials. Development and test environments use explicit overrides. Published v0.2.0 predates this runtime change and still requires an explicit API origin.
+Ingestion uses Project ID and a bound write key; each Project accepts its selected protocol only. CLI management and data reads use a browser-authorized Bearer Session or a personal access token (`LOGCOVE_TOKEN`). Write keys do not grant management or read access. `https://docs.logcove.com` remains reserved for a future documentation site; current public guides are in this repository.
+
+Only production and local testing are maintained. The test web application and API run locally, normally at `http://localhost:5173` and `http://localhost:8787`, with separate test resources and the configured test collector. There is no hosted test web/API environment; the former `app-test`, `api-test`, and `ingest-test` domain plan was cancelled. Do not use those addresses or infer a test ingestion URL from the production hostname.
+
+CLI v0.3.0 uses `https://api.logcove.com` as the built-in fallback, after `--api-url`, `LOGCOVE_API_URL`, and the saved API origin. Upgrades preserve saved origins and origin-scoped credentials. Local development uses an explicit API override. Published v0.2.0 predates this runtime change and still requires an explicit API origin.
 
 ## Dependencies and maintenance
 
@@ -110,4 +120,4 @@ Commit the application lockfile. Main maintenance costs are dependency/security 
 
 - Batch 1 is implemented, with macOS tests, real browser authorization, native credential persistence, and local Project API verification completed. Linux and Windows verification boundaries are recorded in [validation.md](validation.md).
 - Batch 2 download/manifest and Chart commands are implemented. macOS and Linux ARM64 automated tests pass. Real R2 downloads, DuckDB verification of 100,000 synthetic events, Chart result operations, and rendering in the existing web UI have passed; see [validation.md](validation.md).
-- Batch 3 Skill authoring is implemented in `skills/logcove`, with binary-package installation instructions in [skills.md](skills.md) and actual verification in [skill-validation.md](skill-validation.md). Distribution batch 1 CI/build/package/release automation is implemented. All five platform jobs and Skill checks passed on GitHub Actions at `90ccde0` on 2026-09-09, with all six downloaded archives and checksum generation verified; see [hosted validation](releases.md#hosted-ci-and-artifact-validation-2026-09-09). The first binary release is v0.1.0, using explicit API configuration. Hosted test deployment and batch 2 installers/fresh-environment verification remain pending.
+- Batch 3 Skill authoring is implemented in `skills/logcove`, with binary-package installation instructions in [skills.md](skills.md) and actual verification in [skill-validation.md](skill-validation.md). Distribution batch 1 CI/build/package/release automation is implemented. All five platform jobs and Skill checks passed on GitHub Actions at `90ccde0` on 2026-09-09, with all six downloaded archives and checksum generation verified; see [hosted validation](releases.md#hosted-ci-and-artifact-validation-2026-09-09). The first binary release was v0.1.0, using explicit API configuration. The current release is v0.3.0; hosted test deployment is no longer planned. Remaining package-manager publication and platform verification are tracked in [package-manager distribution](package-managers.md).

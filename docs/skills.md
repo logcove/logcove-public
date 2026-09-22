@@ -5,10 +5,10 @@ The instruction-only Skill is in [`skills/logcove`](../skills/logcove/SKILL.md).
 ## Prerequisites
 
 - Install the [prebuilt CLI](../README.md#install), and ensure `logcove` is on the agent's PATH. Its archive includes the matching `skills/logcove/` folder; the Skill is also available as a [standalone ZIP](https://github.com/logcove/logcove-public/releases/download/v0.3.0/logcove-skills-v0.3.0.zip).
-- Complete `logcove login`; CLI 0.3.0 defaults to the production service. See [CLI usage](cli.md) for browser authorization and OS credential-store requirements.
+- Authenticate through `logcove login`, or configure `LOGCOVE_TOKEN` through your secret store for automation. CLI 0.3.0 defaults to the production service. See [CLI usage](cli.md) for browser authorization, PAT compatibility and OS credential-store requirements.
 - Provide a local DuckDB environment. Either the DuckDB CLI or Python package can be used; the Skill's examples use Python's `duckdb` package. A renderer is optional for local preview but necessary before claiming visual verification or image export.
 
-The Skill can guide login, Project/Key management and source selection, but it does not supply a hosted Logcove deployment or create an account. The management workflow requires CLI 0.3.0 or newer. Created write keys go to private local files; the Agent uses the returned path without exposing the secret. A future container can reuse the instructions with suitable dependencies and its own authorized identity; noninteractive container authentication is not implemented here.
+The Skill can guide login, Project/Key management and source selection, but it does not create an account. The management workflow requires CLI 0.3.0 or newer. Created write keys go to private local files; the Agent uses the returned path without exposing the secret. Remote agents and containers can use a personal access token with the rebuilt v0.3.0; token mode needs no desktop credential store. Check root help for `LOGCOVE_TOKEN` before using it, because original v0.3.0 binaries ignore that variable.
 
 ## Install with the CLI (0.2.0+)
 

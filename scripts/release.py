@@ -81,7 +81,7 @@ def package_cli(value, target, output):
         staging = Path(temporary) / name
         staging.mkdir()
         shutil.copy2(binary, staging / executable)
-        for document in ("LICENSE", "README.md", "AGENTS.md"):
+        for document in ("LICENSE", "README.md", "INSTALL.md", "AGENTS.md"):
             shutil.copy2(ROOT / document, staging / document)
         (staging / "docs").mkdir()
         for document in (
