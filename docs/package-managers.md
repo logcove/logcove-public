@@ -59,7 +59,7 @@ For maintainer validation against an already downloaded release, `--version 0.1.
 
 The shared CI workflow waits for all CLI and Skill packages, generates the metadata, checks Homebrew URL/hash pairs and Ruby syntax, and validates the three WinGet YAML files against Microsoft's versioned 1.9.0 JSON schemas. It also checks that WinGet's nested executable path exists in the real ZIP. `jsonschema` is a CI-only dependency; the generator and CLI add no runtime dependency. Schema validation fetches the official versioned schema files and requires network access, but no user credentials.
 
-The metadata ZIP is included in v0.3.0 and SHA256SUMS. Generating it does not publish to Homebrew or WinGet. Ruby/schema checks do not establish a real package-manager install or WinGet review acceptance.
+The metadata ZIP is included in each release with SHA256SUMS, including v0.3.1. Generating it does not publish to Homebrew or WinGet. Ruby/schema checks do not establish a real package-manager install or WinGet review acceptance.
 
 ## Public-release preparation (2026-09-23)
 

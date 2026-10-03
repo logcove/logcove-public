@@ -105,6 +105,15 @@ The current CLI uses `/api/v1/projects`. `projects list` defaults to active Proj
 
 `get` returns `{"data":{...}}`. Both commands include `id`, `name`, `description`, `status`, `ingestion_protocol`, `data_prefix`, `write_key_id`, `ingestion.desired_revision`, `created_at`, and `updated_at` for each Project. Archived Project metadata is readable, but its log data is not. Names and descriptions provide analysis context; they do not substitute for reading the actual Parquet schema.
 
+Starting with CLI 0.3.1, Project responses preserve the read-only `usage` metadata
+returned by the service. `raw_bytes` is the normalized, uncompressed UTF-8 JSON
+written over the latest 90 UTC calendar dates, excluding platform root fields.
+`start_date` and `end_date` define that window; `tracking_started_at` marks when
+accounting began for the Project. `updated_at` is the last reported increase in
+the window, or null if none. Reports update asynchronously and do not backfill
+older logs. This total is neither current R2 storage size nor the account's
+billing-period usage; file listings and manifests still report Parquet bytes.
+
 ## Manage Projects and write keys
 
 Each Project has one immutable `ingestion_protocol`: `http_json` (the default) or `otlp_http` (OTLP/HTTP Protobuf Logs). Choose it at creation:

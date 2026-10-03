@@ -2,9 +2,17 @@
 
 The instruction-only Skill is in [`skills/logcove`](../skills/logcove/SKILL.md). It uses the Rust CLI for Logcove operations, an independently installed DuckDB for local computation, and Vega-Lite for chart specifications. The same folder works with Codex and Claude Code. No MCP configuration, API key prompt, bundled query engine, or extra CLI command is required.
 
+The Skill targets the online Logcove service at `https://api.logcove.com` and
+`https://app.logcove.com`. It contains no development-server setup or environment
+switching instructions. Its ingestion reference lists supported HTTP JSON and
+OTLP/HTTP Protobuf Logs endpoints and required Project/write-key headers, without
+prescribing OpenTelemetry SDKs, framework instrumentation, Collector configurations
+or shutdown behavior. Local DuckDB analysis and file reuse remain part of the
+normal service workflow.
+
 ## Prerequisites
 
-- Install the [prebuilt CLI](../README.md#install), and ensure `logcove` is on the agent's PATH. Its archive includes the matching `skills/logcove/` folder; the Skill is also available as a [standalone ZIP](https://github.com/logcove/logcove-public/releases/download/v0.3.0/logcove-skills-v0.3.0.zip).
+- Install the [prebuilt CLI](../README.md#install), and ensure `logcove` is on the agent's PATH. Its archive includes the matching `skills/logcove/` folder; the Skill is also available as a [standalone ZIP](https://github.com/logcove/logcove-public/releases/download/v0.3.1/logcove-skills-v0.3.1.zip).
 - Authenticate through `logcove login`, or configure `LOGCOVE_TOKEN` through your secret store for automation. CLI 0.3.0 defaults to the production service. See [CLI usage](cli.md) for browser authorization, PAT compatibility and OS credential-store requirements.
 - Provide a local DuckDB environment. Either the DuckDB CLI or Python package can be used; the Skill's examples use Python's `duckdb` package. A renderer is optional for local preview but necessary before claiming visual verification or image export.
 
@@ -99,6 +107,7 @@ skills/logcove/
   SKILL.md
   references/
     cli.md
+    ingestion.md
     duckdb.md
     charts.md
 ```

@@ -45,7 +45,7 @@ When combining multiple pulls for one Project, combine the chosen files and regi
 
 ## Inspect and compute
 
-Start with column names/types and a small sample of fields relevant to the question. `_created_time` is reserved for the Vector receipt timestamp, and views normalize it to TIMESTAMPTZ. Historical files without it or mixed files producing NULL system times need repair before time-filtered analysis. Business log formats are not fixed. A timestamp might be a string, timestamp, or integer epoch; determine its timezone and unit before filtering. If `try_cast` is useful, also count failed conversions instead of silently treating them as missing events.
+Start with column names/types and a small sample of fields relevant to the question. `_created_time` is reserved for the Logcove receipt timestamp, and views normalize it to TIMESTAMPTZ. Historical files without it or mixed files producing NULL system times need repair before time-filtered analysis. Business log formats are not fixed. A timestamp might be a string, timestamp, or integer epoch; determine its timezone and unit before filtering. If `try_cast` is useful, also count failed conversions instead of silently treating them as missing events.
 
 Downloads select UTC ingestion dates, while the user's period may describe event time in another timezone. Use an explicit half-open event-time interval in SQL when the question needs it, and explain whether the selected ingestion partitions cover possible late arrivals. Historical snapshots are not a live stream.
 
@@ -62,7 +62,7 @@ Save the actual query to `query.sql`. Keep file loading/view registration outsid
 
 Check row counts and totals against the question. Distinguish no matching events from missing data or failed parsing. For ratios, state the denominator and handle zero denominators explicitly. Describe aggregation granularity, timezone, coverage, and relevant data-quality limitations with the result.
 
-If the machine is constrained, narrow the requested range or select relevant columns and aggregate in DuckDB. DuckDB memory/thread limits and a local spill directory can be configured for the available environment; do not automatically consume all cores or claim browser/container fallback is implemented.
+If the machine is constrained, narrow the requested range or select relevant columns and aggregate in DuckDB. DuckDB memory/thread limits and a local spill directory can be configured for the available resources; do not automatically consume all cores.
 
 ## Verify and render locally
 
@@ -103,4 +103,4 @@ An empty result array is valid when an actual query over known, available data p
 
 ## OTLP Projects
 
-`ingestion_protocol` identifies how logs arrived, not a complete Parquet schema. Inspect the actual columns. The current OTLP mapping stores `resource`, `scope`, and `attributes` as JSON strings; a structured `body` is JSON-encoded, while a text body remains text. Use DuckDB JSON functions for nested attributes. `_created_time` remains receipt time; `event_time` is the OTLP event timestamp (Vector falls back to observed time when it is absent).
+`ingestion_protocol` identifies how logs arrived, not a complete Parquet schema. Inspect the actual columns. Logcove stores OTLP `resource`, `scope`, and `attributes` as JSON strings; a structured `body` is JSON-encoded, while a text body remains text. Use DuckDB JSON functions for nested attributes. `_created_time` remains receipt time; `event_time` is the OTLP event timestamp, falling back to observed time when it is absent.

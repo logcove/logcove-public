@@ -2,7 +2,7 @@
 
 Use this guide when the user asks you to install the Logcove CLI and its Skill.
 The public repository is https://github.com/logcove/logcove-public. The current
-stable release is **v0.3.0**, including personal-token support.
+stable release is **v0.3.1**, including personal-token support.
 
 Install prebuilt binaries; a Rust toolchain or source checkout is not required.
 Homebrew and WinGet publication is still pending. Use the release archives below
@@ -13,8 +13,8 @@ until those channels are marked available in the repository's package-manager gu
 - Determine the operating system, CPU architecture, shell, and current agent
   (Codex or Claude Code). Ask only if the target agent is not clear.
 - Check whether `logcove` is already on PATH. If present, run `logcove --version`
-  and `logcove --help`. The rebuilt v0.3.0 mentions `LOGCOVE_TOKEN` in root help;
-  the original v0.3.0 does not. A version number alone cannot distinguish them.
+  and `logcove --help`. Require version 0.3.1 or newer and `LOGCOVE_TOKEN` in root
+  help to use the current Skill and receive Project raw-usage metadata.
 - Reuse a compatible current installation. Do not downgrade a newer version,
   overwrite a package-manager installation with a manual copy, reset API
   configuration, or delete saved credentials.
@@ -25,15 +25,15 @@ until those channels are marked available in the repository's package-manager gu
 
 Download the matching asset and `SHA256SUMS` from this exact release directory:
 
-https://github.com/logcove/logcove-public/releases/download/v0.3.0/
+https://github.com/logcove/logcove-public/releases/download/v0.3.1/
 
 | System | Asset |
 | --- | --- |
-| macOS Apple Silicon | `logcove-v0.3.0-aarch64-apple-darwin.tar.gz` |
-| macOS Intel | `logcove-v0.3.0-x86_64-apple-darwin.tar.gz` |
-| Linux x64 | `logcove-v0.3.0-x86_64-unknown-linux-gnu.tar.gz` |
-| Linux ARM64 | `logcove-v0.3.0-aarch64-unknown-linux-gnu.tar.gz` |
-| Windows x64 | `logcove-v0.3.0-x86_64-pc-windows-msvc.zip` |
+| macOS Apple Silicon | `logcove-v0.3.1-aarch64-apple-darwin.tar.gz` |
+| macOS Intel | `logcove-v0.3.1-x86_64-apple-darwin.tar.gz` |
+| Linux x64 | `logcove-v0.3.1-x86_64-unknown-linux-gnu.tar.gz` |
+| Linux ARM64 | `logcove-v0.3.1-aarch64-unknown-linux-gnu.tar.gz` |
+| Windows x64 | `logcove-v0.3.1-x86_64-pc-windows-msvc.zip` |
 
 These are direct public downloads. Use an HTTP client that follows GitHub's
 release-asset redirects and reports HTTP errors. Download to a temporary directory.
@@ -41,7 +41,7 @@ Compare the archive's SHA-256 with the matching filename in `SHA256SUMS` **befor
 extracting or running it**. Use `shasum -a 256`, `sha256sum`, or PowerShell's
 `Get-FileHash -Algorithm SHA256`. Stop if the entry is missing or the digest differs.
 
-The archives extract into a `logcove-v0.3.0-<target>` directory. They contain the
+The archives extract into a `logcove-v0.3.1-<target>` directory. They contain the
 executable, license, documentation, and Skill sources.
 
 Compatibility boundaries:
@@ -65,7 +65,7 @@ existing shell/profile entries and avoid adding duplicate PATH entries. In the
 current session, an absolute executable path may be needed until PATH is refreshed.
 Check which executable `logcove` resolves to so an older copy does not shadow it.
 
-Run the installed binary's `--version` and `--help`. Confirm both version 0.3.0
+Run the installed binary's `--version` and `--help`. Confirm both version 0.3.1
 (or a newer compatible version) and `LOGCOVE_TOKEN` support.
 
 ## 4. Install the matching Skill

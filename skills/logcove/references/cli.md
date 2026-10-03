@@ -2,7 +2,7 @@
 
 Use this reference for Logcove operations. All commands assume a compatible `logcove` executable on PATH. Check command-specific `--help` when in doubt; do not invent commands such as `logcove query` or `logcove data describe`.
 
-## Identity and environment
+## Identity and service
 
 ```sh
 logcove --version
@@ -13,15 +13,15 @@ Before `logcove whoami` or another authenticated command, check whether `LOGCOVE
 
 Once this check passes, run `logcove whoami`. Only when `LOGCOVE_TOKEN` is absent and the response is `UNAUTHENTICATED`, use `logcove login` for browser approval.
 
-The CLI defaults to `https://api.logcove.com`; ordinary users can run `logcove login` without configuring an address. Use `logcove config show` to check the effective origin and preserve an existing override. Only configure another origin when the user selects a development or other deployment. Precedence is flag, `LOGCOVE_API_URL`, saved configuration, then the production default. `--api-url <origin>` overrides the target for one invocation; use it consistently throughout the task. Published v0.2.0 predates this default: if it reports `API_NOT_CONFIGURED`, explain that the CLI needs an update; do not ask ordinary users to invent or supply an API address.
+The CLI defaults to `https://api.logcove.com`; run `logcove login` without configuring an address. Use `logcove config show` to confirm that target before authenticated operations. Report a mismatch without silently changing configuration. If an older CLI reports `API_NOT_CONFIGURED`, explain that it needs an update.
 
-Browser login uses a signed Bearer Session, not a JWT or Vector write key. The CLI stores it in the OS credential service, independently of the desktop app. Do not read the keychain, request a Session token from the user, put Session tokens in shell commands, or build Session Authorization headers. Log ingestion uses a separate write-key header as described in [ingestion.md](ingestion.md).
+Browser login uses a signed Bearer Session, not a JWT or ingestion write key. The CLI stores it in the OS credential service, independently of the desktop app. Do not read the keychain, request a Session token from the user, put Session tokens in shell commands, or build Session Authorization headers. Log ingestion uses a separate write-key header as described in [ingestion.md](ingestion.md).
 
-`logcove login --no-browser` prints a link and waits for browser approval. A localhost link requires the associated local web application. An expired or denied request needs a new login attempt, not repeated approval of the old link. Do not log out or change accounts merely to diagnose a download error.
+`logcove login --no-browser` prints a link and waits for browser approval. An expired or denied request needs a new login attempt, not repeated approval of the old link. Do not log out or change accounts merely to diagnose a download error.
 
 ### CI and remote agents
 
-A CLI version with personal-token support accepts `LOGCOVE_TOKEN` from the user's environment or CI secret store. The rebuilt v0.3.0 supports it, but original v0.3.0 binaries do not; follow the compatibility check above before making authenticated requests. The selected API deployment must also support PATs. With a supported CLI, run `logcove whoami` directly, without `login`. The token identifies an account and grants Full access to its business resources, subject to existing ownership, quota and retention rules. It cannot access Billing, account-security endpoints or PAT management.
+A CLI version with personal-token support accepts `LOGCOVE_TOKEN` from the user's environment or CI secret store. The rebuilt v0.3.0 supports it, but original v0.3.0 binaries do not; follow the compatibility check above before making authenticated requests. With a supported CLI, run `logcove whoami` directly, without `login`. The token identifies an account and grants Full access to its business resources, subject to existing ownership, quota and retention rules. It cannot access Billing, account-security endpoints or PAT management.
 
 Token mode bypasses the OS credential service, so Linux automation needs no desktop keyring. Invalid or empty environment values fail rather than falling back to a stored account. A 401 leaves stored Sessions untouched. `login` and `logout` return `ENV_TOKEN_ACTIVE` until the variable is unset; unsetting a variable does not revoke the token. Token creation and revocation are available in the app's Personal tokens page. Do not read environment secrets into tool output, copy them into prompts, or put them in command arguments.
 
@@ -66,13 +66,26 @@ Check `logcove data pull --help` for `--reuse-manifest`; it requires CLI 0.3.0 o
 
 ## Manage Projects and write keys
 
+Project responses include read-only `usage`: `raw_bytes` is the total written in
+the latest 90 UTC calendar dates, including today. `start_date` and `end_date`
+describe that window; `tracking_started_at` marks when raw accounting began for
+the Project, so it may cover less than 90 days. `updated_at` is the last reported
+increase within the window, or null if there is none. Reports are asynchronous;
+this total is not current storage size or the account's billing-period total.
+Empty Projects report zero; the total can fall as older dates leave the window.
+
+Raw usage counts normalized logs as compact UTF-8 JSON before Parquet encoding,
+excluding platform root fields. Downloads and manifest `size` still describe
+actual Parquet file bytes; do not use them to infer raw write allowance. Use
+the returned usage rather than recomputing billing from downloaded files.
+
 Each Project has one immutable `ingestion_protocol`: `http_json` (the default) or `otlp_http` (OTLP/HTTP Protobuf Logs). Choose it at creation:
 
 ```sh
 logcove projects create --name "OTel logs" --ingestion-protocol otlp_http
 ```
 
-Use `--ingestion-protocol http_json` for ordinary JSON. `projects update` does not accept the protocol; create a different Project to change formats. The same write Key may bind Projects of different protocols, but each request must use the matching Project and protocol endpoint. This flag requires CLI 0.3.0 and an API with OTLP Project support. A created OTLP Project alone does not prove its collector endpoint is deployed. Use the endpoint supplied by that environment, never guess it from the API host.
+Use `--ingestion-protocol http_json` for ordinary JSON. `projects update` does not accept the protocol; create a different Project to change formats. The same write Key may bind Projects of different protocols, but each request must use the matching Project and protocol endpoint from [ingestion.md](ingestion.md).
 
 These commands require CLI 0.3.0 or newer; v0.2.0 and earlier lack them. Check `projects --help` and `keys --help`. They use `LOGCOVE_TOKEN` when supported and set, or the saved login Session, and do not need DuckDB or data downloads.
 
@@ -108,7 +121,7 @@ These are independent examples, not a setup script to run in sequence. Only perf
 
 One Project can have one write key. Key creation and `keys set-projects` reject Projects already using another Key. `set-projects` replaces the **entire** set: supply every intended Project with repeated `--project-id`, or explicitly clear it. For intentional single-Project replacement, use `projects update --write-key-id` with the Key resource ID. Names/descriptions and a binding change can share one Project update.
 
-Management success means the desired state was saved. Vector applies ingestion changes asynchronously; `ingestion.desired_revision` is not a loaded-state acknowledgement. Do not claim the collector has already accepted the new key solely from management success.
+Management success means the desired state was saved. Logcove applies ingestion changes asynchronously; `ingestion.desired_revision` is not a readiness acknowledgement. Do not claim the ingestion endpoint has already accepted the new key solely from management success.
 
 If local file reservation fails (`KEY_FILE_ERROR`), no creation request was sent. If creation's response is lost, inspect `keys list` before retrying; the API cannot recover the secret. If saving fails after creation (`KEY_FILE_WRITE_FAILED`), the error provides the created Key ID and a revoke command. Explain the partial outcome and handle that Key within the user's authorized scope before retrying. Never print API response bodies or secret files to diagnose it.
 
@@ -121,7 +134,7 @@ Successful operations return JSON on stdout, usually under `data`. Help/version 
 | `INVALID_TOKEN`, `ENV_TOKEN_ACTIVE` | Have the user correct `LOGCOVE_TOKEN` or explicitly choose Session mode; do not print or silently remove the variable |
 | `UNAUTHENTICATED` | If `LOGCOVE_TOKEN` is set, fix or replace it through the secret store; do not fall back. Otherwise use browser login. Preserve the selected account and API origin |
 | Credential-store errors | Report the OS-store requirement; Linux needs an unlocked Secret Service. Do not fall back to plaintext storage |
-| `ACCESS_DENIED`, `NOT_FOUND` | Check the selected account, resource, and environment; do not restart login automatically |
+| `ACCESS_DENIED`, `NOT_FOUND` | Check the selected account and resource; do not restart login automatically |
 | `NETWORK_ERROR`, `SERVER_ERROR`, `RATE_LIMITED` | Report the failure and request ID if present; retry reads only when appropriate, without an unbounded loop |
 | `OBJECT_CHANGED`, `DOWNLOAD_FAILED`, `DOWNLOAD_DENIED` | Do not analyze the incomplete pull; a new pull starts fresh, and `--concurrency 1` may help diagnose connection pressure |
 | `INVALID_CACHE` | Check the supplied completed manifest, API origin and Project; do not edit its identity to force reuse |

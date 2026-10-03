@@ -20,7 +20,7 @@ Read [AGENTS.md](../AGENTS.md) before changing code. Keep credentials, real logs
 
 ## Local development
 
-Use Rust 1.90 or newer and the committed Cargo.lock. End users can install the prebuilt CLI from the [Release](https://github.com/logcove/logcove-public/releases/tag/v0.3.0); building from source is for development.
+Use Rust 1.90 or newer and the committed Cargo.lock. End users can install the prebuilt CLI from the [Release](https://github.com/logcove/logcove-public/releases/tag/v0.3.1); building from source is for development.
 
 ```sh
 git clone https://github.com/logcove/logcove-public.git
@@ -64,7 +64,7 @@ Version 0.3.0 adds the default production API, Project/Key management, local dow
 
 The CLI and shared analysis Skill are implemented. Five-platform CI, archive packaging and tag-triggered release automation are also implemented, with successful hosted checks for macOS ARM64/x64, Linux ARM64/x64 and Windows x64. A passing build does not establish real browser login, native credential-store behavior or installation on every supported desktop.
 
-The current binary release is `v0.3.0`, with five platform archives, a standalone Skill ZIP, package-manager metadata and SHA256SUMS. The README documents manual installation and an [agent installation guide](../INSTALL.md). Do not push a version tag to test ordinary CI: tag pushes trigger publication after the checks pass.
+Version `v0.3.1` adds Project raw-usage metadata and the online-service Skill. Its release packages five platform archives, a standalone Skill ZIP, package-manager metadata and SHA256SUMS. The README documents manual installation and an [agent installation guide](../INSTALL.md). Do not push a version tag to test ordinary CI: tag pushes trigger publication after the checks pass.
 
 - [Implementation plan](implementation-plan.md): scope, responsibilities and delivery batches.
 - [CLI validation](validation.md): automated checks, live workflows and platform boundaries.

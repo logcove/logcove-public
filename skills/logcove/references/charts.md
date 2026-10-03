@@ -60,7 +60,7 @@ logcove charts update chart_00000000-0000-4000-8000-000000000001 \
 
 Use the observed revision, not the sample `1`. Every SQL update also requires the complete Project list, or `--clear-projects` for SQL without Project sources. Omitted fields are preserved. `--clear-description` clears the description. A revision conflict requires a fresh read and reconciliation; do not blindly overwrite.
 
-Verify saved SQL, dependencies and spec by reading them back. Return the ID and the actual known web URL `/charts/<id>`; do not derive a web origin by stripping `api` from a hostname. Opening a Chart calculates its selected time range locally when there is no cached result. The default is the last hour, so historical data may require choosing a different range. Cache survives navigation in the same application instance; Refresh recomputes it. Deletion removes only the definition and requires user-requested deletion scope:
+Verify saved SQL, dependencies and spec by reading them back. Return the ID and `https://app.logcove.com/charts/<id>`. Opening a Chart calculates its selected time range locally when there is no cached result. The default is the last hour, so historical data may require choosing a different range. Cache survives navigation in the same application instance; Refresh recomputes it. Deletion removes only the definition and requires user-requested deletion scope:
 
 ```sh
 logcove charts delete chart_00000000-0000-4000-8000-000000000001

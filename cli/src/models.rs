@@ -38,6 +38,19 @@ pub struct Project {
     pub data_prefix: String,
     pub created_at: String,
     pub updated_at: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub usage: Option<ProjectUsage>,
+}
+
+#[derive(Deserialize, Serialize)]
+pub struct ProjectUsage {
+    pub raw_bytes: u64,
+    pub start_date: String,
+    pub end_date: String,
+    pub timezone: String,
+    pub granularity: String,
+    pub tracking_started_at: String,
+    pub updated_at: Option<String>,
 }
 
 #[derive(Deserialize)]

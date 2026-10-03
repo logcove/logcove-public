@@ -13,6 +13,19 @@ fn user() -> serde_json::Value {
         "image":null,"created_at":"2026-09-08T00:00:00Z","updated_at":"2026-09-08T00:00:00Z"})
 }
 
+#[test]
+fn project_raw_usage_survives_deserialization_and_json_output() {
+    let mut value = project();
+    let usage = json!({"raw_bytes":9876543210u64,"start_date":"2026-07-06","end_date":"2026-10-03",
+        "timezone":"UTC","granularity":"day","tracking_started_at":"2026-10-03T01:00:00Z","updated_at":null});
+    value["usage"] = usage.clone();
+    let model: logcove::models::Project = serde_json::from_value(value).unwrap();
+    assert_eq!(serde_json::to_value(model).unwrap()["usage"], usage);
+    // The upgrade can precede the service deployment without inventing usage.
+    let older: logcove::models::Project = serde_json::from_value(project()).unwrap();
+    assert!(serde_json::to_value(older).unwrap().get("usage").is_none());
+}
+
 fn project() -> serde_json::Value {
     json!({"id":PROJECT_ID,"name":"API logs","description":"Request durations in milliseconds", "status":"active",
         "data_prefix":format!("logs/project={PROJECT_ID}/"),"created_at":"2026-09-08T00:00:00Z","updated_at":"2026-09-08T00:00:00Z"})

@@ -2,11 +2,29 @@
 
 ## Status and scope
 
+### v0.3.1 (2026-10-03)
+
+This patch preserves Project `usage` in CLI JSON output and updates the bundled
+Skill for the online service, raw usage and protocol-level ingestion guidance.
+The release also bundles `INSTALL.md` and points user download links at v0.3.1.
+Existing login credentials and downloaded manifests remain usable. See the
+[release notes and upgrade instructions](release-notes/v0.3.1.md).
+
+Local checks passed: 85 Rust tests, strict Clippy and formatting, seven packaging
+tests, two Skill/DuckDB checks, two publishing-workflow checks and tag/version
+validation. One real OS credential-store test remains explicitly ignored.
+
+Publishing uses the unchanged five-platform checks and tag-triggered workflow.
+Homebrew/WinGet metadata remains a release asset; neither package-manager channel
+is enabled by this release. The [workflow run](https://github.com/logcove/logcove-public/actions/workflows/release.yml)
+and published assets establish hosted release completion; earlier entries below
+are historical records.
+
 ### Public distribution (2026-09-23)
 
 The repository is public. All seven v0.3.0 archives and SHA256SUMS were downloaded
 without GitHub authentication; every archive matched its published checksum.
-The September 19 replacement is the current released v0.3.0, including PAT support.
+The September 19 replacement is the v0.3.0 build with PAT support.
 Older entries below record the preparation state on their respective dates.
 
 The [agent installation guide](../INSTALL.md) supports installing a release binary
@@ -89,13 +107,13 @@ Branch and PR runs upload the same package format as Actions artifacts, retained
 Starting with version `0.2.0`, a complete release has seven archives plus one checksum file (the released `0.1.0` has no package-manager metadata archive):
 
 ```text
-logcove-v0.3.0-aarch64-apple-darwin.tar.gz
-logcove-v0.3.0-x86_64-apple-darwin.tar.gz
-logcove-v0.3.0-x86_64-unknown-linux-gnu.tar.gz
-logcove-v0.3.0-aarch64-unknown-linux-gnu.tar.gz
-logcove-v0.3.0-x86_64-pc-windows-msvc.zip
-logcove-skills-v0.3.0.zip
-logcove-package-managers-v0.3.0.zip
+logcove-v0.3.1-aarch64-apple-darwin.tar.gz
+logcove-v0.3.1-x86_64-apple-darwin.tar.gz
+logcove-v0.3.1-x86_64-unknown-linux-gnu.tar.gz
+logcove-v0.3.1-aarch64-unknown-linux-gnu.tar.gz
+logcove-v0.3.1-x86_64-pc-windows-msvc.zip
+logcove-skills-v0.3.1.zip
+logcove-package-managers-v0.3.1.zip
 SHA256SUMS
 ```
 
@@ -121,7 +139,7 @@ From the repository root, using Python 3.12 or newer:
 
 ```sh
 python3 -m unittest discover -s scripts/tests -v
-python3 scripts/release.py version --tag v0.2.0
+python3 scripts/release.py version --tag v0.3.1
 ```
 
 Run Skill checks in an isolated environment with `scripts/requirements-ci.txt` installed:
