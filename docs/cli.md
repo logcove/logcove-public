@@ -2,7 +2,7 @@
 
 ## Install
 
-Download the prebuilt CLI for your platform from [v0.3.0](https://github.com/logcove/logcove-public/releases/tag/v0.3.0), extract it, and place `logcove` (`logcove.exe` on Windows) on PATH. Follow the [installation guide](../README.md#install) for macOS, Linux and Windows commands. Rust and a source checkout are not needed.
+Download the prebuilt CLI for your platform from [v0.3.1](https://github.com/logcove/logcove-public/releases/tag/v0.3.1), extract it, and place `logcove` (`logcove.exe` on Windows) on PATH. Follow the [installation guide](../README.md#install) for macOS, Linux and Windows commands. Rust and a source checkout are not needed.
 
 The CLI implements authentication, Project and write-key management, Parquet downloads, and Chart operations. Each CLI package also includes the [analysis Skill](skills.md). CLI commands do not require DuckDB; install DuckDB separately for local analysis. Source builds and development commands are in the [development guide](development.md#local-development).
 
@@ -124,7 +124,7 @@ logcove projects create --name "OTel logs" --ingestion-protocol otlp_http
 
 Use `--ingestion-protocol http_json` for ordinary JSON. `projects update` does not accept the protocol; create a different Project to change formats. The same write Key may bind Projects of different protocols, but each request must use the matching Project and protocol endpoint. This flag requires CLI 0.3.0 and an API with OTLP Project support. A created OTLP Project alone does not prove its collector endpoint is deployed. Use the endpoint supplied by that environment, never guess it from the API host.
 
-Business commands authenticate using `LOGCOVE_TOKEN` when set, or the CLI's stored Session otherwise (PAT support requires the rebuilt v0.3.0 and a compatible API deployment). Write keys authenticate Vector ingestion only; they cannot log in to the CLI or read data.
+Business commands authenticate using `LOGCOVE_TOKEN` when set, or the CLI's stored Session otherwise. The current v0.3.1 and production API support PAT authentication. Write keys authenticate Vector ingestion only; they cannot log in to the CLI or read data.
 
 ```sh
 logcove projects create --name "API logs" --description "Backend request logs"
@@ -316,11 +316,11 @@ Run that test only in a configured OS credential environment. CI performs build 
 
 ## Personal tokens for automation
 
-The rebuilt v0.3.0 supports `LOGCOVE_TOKEN`; the original v0.3.0 binaries do not.
-Check root `logcove --help` for `LOGCOVE_TOKEN` before authenticated commands;
-replace older binaries even if `--version` already says 0.3.0.
-The API/app must also have personal-token support deployed before use. Publishing
-this CLI does not deploy the service; browser Session login remains available.
+CLI v0.3.1 supports `LOGCOVE_TOKEN`, and the production API/app has personal-token
+support deployed. The September 19 replacement v0.3.0 also supports PATs, while
+the original v0.3.0 binaries do not. For an older installation, check root help
+for `LOGCOVE_TOKEN` or upgrade to v0.3.1; the v0.3.0 version number alone does not
+establish support. Browser Session login remains available.
 
 Create a named token under **Personal tokens** in the app. Its secret appears once;
 store it in your CI or remote agent secret store and inject it as `LOGCOVE_TOKEN`.

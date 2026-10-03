@@ -1,5 +1,12 @@
 # CLI validation
 
+Current release (2026-10-03): v0.3.1 is published with Project raw-usage metadata,
+PAT support, Project/Key management, download reuse and definition-only Charts.
+Local checks passed 85 Rust tests, formatting and strict Clippy; all five hosted
+platform jobs and release checks passed. See [release verification](releases.md).
+The dated sections below preserve earlier local validation; result-upload
+commands and source-only publication states are historical.
+
 ## Project/Key management validation (2026-09-10)
 
 Current source adds Project creation, metadata/binding updates, archive/restore and status-filtered lists, plus Key list/get/create/rename/binding replacement/revocation. This uses existing public APIs; no backend, live account resources, installed CLI/Skill, or release was changed.
@@ -12,7 +19,7 @@ Current source adds Project creation, metadata/binding updates, archive/restore 
 
 Commands are available in a source build; published v0.2.0 remains unchanged. Key creation only reports success after the private file is written and synced. The plaintext credential is not part of any command's JSON output.
 
-Current working-tree change: Charts now store definitions only. Result-upload/R2 checks below describe the older contract. The current implementation removes result commands, filters Project views by system `_created_time` before executing parameter-free SQL, and renders local calculations in the web/desktop app. Release and installed copies have not been updated.
+2026-09-09 contract change: Charts now store definitions only. Result-upload/R2 checks below describe the older contract. The implementation removes result commands, filters Project views by system `_created_time` before executing parameter-free SQL, and renders local calculations in the web/desktop app. Release and installed copies had not been updated at that validation step; definition-only Charts are included in v0.3.1.
 
 Date: 2026-09-08. This is local development verification, not a hosted deployment or binary release.
 

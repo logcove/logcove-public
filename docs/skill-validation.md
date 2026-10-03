@@ -1,5 +1,11 @@
 # Analysis Skill validation
 
+Current release (2026-10-03): the matching online-service Skill is published with
+CLI v0.3.1 and as a standalone ZIP. Skill/DuckDB and five-platform release checks
+passed; downloaded archives match their published checksums. See [release verification](releases.md).
+The dated instruction-review and rendering evidence below is historical, not a
+new acceptance run for v0.3.1 or a claim of fresh agent-host verification.
+
 Date: 2026-09-08. Scope: the instruction-only `skills/logcove` package and its CLI/DuckDB/Vega-Lite workflow. This is source-checkout validation, not a binary release or a hosted deployment.
 
 ## Verified
@@ -52,4 +58,7 @@ Codex and Claude Code installation paths and invocation syntax were checked agai
 
 The render check used the Vega runtime directly to create SVG; it was not a new browser UI test. The existing CLI verification remains in [validation.md](validation.md). CLI code and CI workflows were unchanged for this Skill step, so the Rust suite was not rerun merely for instruction/documentation edits.
 
-After this Skill commit, design CLI/Skill CI/CD: validate packaged references, select binary targets and release artifacts, and establish release/versioning and host-installation acceptance checks. The existing CLI CI configuration is not an executed release pipeline, and no publication is performed in this step.
+The next step at the time of this Skill review was CLI/Skill CI/CD. The five-platform
+build and tag-triggered release pipeline has since been implemented and run for
+v0.3.1. Fresh agent-host discovery, OS credential-store behavior and package-manager
+installation retain their separate verification boundaries.

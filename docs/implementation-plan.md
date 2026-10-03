@@ -2,6 +2,11 @@
 
 Agreed on 2026-09-08. This document distinguishes planned capabilities from implemented and verified behavior; a plan is not a release announcement.
 
+Current status (2026-10-03): the public v0.3.1 CLI and Skill are released. All five
+platform jobs and Skill/release checks passed; anonymous release downloads and
+checksums were verified. See [release status](releases.md). Dated earlier steps
+below describe implementation history, not uncompleted release prerequisites.
+
 ## Goal and repository boundary
 
 Complete the following workflow with a local coding agent:
@@ -20,7 +25,7 @@ The CLI depends only on public HTTP APIs. It does not read service databases, ca
 
 The CLI implements deterministic operations: authentication, Project/Key management, pagination, file downloading, Chart definitions. The Skill guides the agent in setting up sources, selecting data, inspecting schemas, executing DuckDB, writing SQL, producing Vega-Lite, and checking results.
 
-There is no CLI query engine, `data describe` command, bundled DuckDB, LLM client, background daemon, or SDK/code generation layer. The agent uses an independently installed DuckDB environment. A future container can install the released CLI and the same Skill; noninteractive service identity is a later design.
+There is no CLI query engine, `data describe` command, bundled DuckDB, LLM client, background daemon, or SDK/code generation layer. The agent uses an independently installed DuckDB environment. Remote agents and containers can use the same released CLI and Skill with a personal access token supplied through `LOGCOVE_TOKEN`; no desktop credential store is required in PAT mode.
 
 ## Command scope
 
@@ -36,7 +41,7 @@ There is no CLI query engine, `data describe` command, bundled DuckDB, LLM clien
 | `charts list/get/create/update/delete` | 2 | Manage Chart definitions |
 | `skills install --agent codex\|claude [--force]` | 3 | Install the Skill embedded in the CLI into the selected agent's user directory, without API access |
 
-2026-09-10: Management commands are implemented in source, not released. `projects list --status` supports active (default), archived and all. Key output files use exclusive creation and owner permissions; no plaintext key is returned. The only new direct dependency is Windows-only `windows-sys` (already present transitively), used for native file ACLs. No backend change, billing command, ingestion client, query engine or new authentication flow is included. Desktop distribution can remain deferred while CLI workflows are completed.
+Historical state on 2026-09-10: management commands were implemented in source, not yet released. `projects list --status` supports active (default), archived and all. Key output files use exclusive creation and owner permissions; no plaintext key is returned. The only new direct dependency is Windows-only `windows-sys` (already present transitively), used for native file ACLs. No backend change, billing command, ingestion client, query engine or new authentication flow is included. Desktop distribution can remain deferred while CLI workflows are completed.
 
 Normal command output is stable JSON on stdout. Login instructions, progress, and warnings go to stderr. Failures return a nonzero exit code. Tokens and signed download URLs are not normal output. SQL and Vega-Lite specifications are accepted through files in batch 2 to avoid shell escaping.
 
@@ -50,9 +55,9 @@ Login reuses the device authorization protocol with `client_id=logcove-cli`. Ope
 
 The credential is a signed Better Auth Bearer Session, not a JWT and not a Vector write key. Store it through `keyring` with service `com.logcove.cli.session`, keyed by canonical API origin. CLI and desktop use separate Sessions and credential entries. The config directory is not part of credential identity: two invocations targeting the same API share the CLI credential even if their config directories differ.
 
-Persist changed `set-auth-token` response headers and carry the new token into subsequent requests. Invalid Sessions are cleared only if the stored credential still matches the failed request, preserving a newer login. Permission failures, server errors, and network failures do not delete valid credentials. Logout revokes the server Session before deleting its matching local entry; a failed remote logout remains retryable. OS credential writes and conditional deletion share a per-user file lock containing no secrets. Do not silently fall back to plaintext files. Linux requires a running, unlocked Secret Service; headless credential injection is deferred.
+Persist changed `set-auth-token` response headers and carry the new token into subsequent requests. Invalid Sessions are cleared only if the stored credential still matches the failed request, preserving a newer login. Permission failures, server errors, and network failures do not delete valid credentials. Logout revokes the server Session before deleting its matching local entry; a failed remote logout remains retryable. OS credential writes and conditional deletion share a per-user file lock containing no secrets. Do not silently fall back to plaintext files. Browser login on Linux requires a running, unlocked Secret Service. PAT mode uses `LOGCOVE_TOKEN` and bypasses the OS credential store; invalid or empty environment tokens never fall back to a saved Session.
 
-Project listing traverses all `/data/v1/projects` pages, including empty pages with a next cursor, and returns active readable sources. Detail uses `/api/v1/projects/{id}` and may describe an owned archived Project. Project names and descriptions provide context; they do not establish the actual Parquet schema.
+Project listing traverses all `/api/v1/projects` pages, including empty pages with a next cursor. It defaults to active sources; `--status archived` or `--status all` includes archived metadata, which does not authorize reading archived logs. Detail uses `/api/v1/projects/{id}` and may describe an owned archived Project. Project names and descriptions provide context; they do not establish the actual Parquet schema.
 
 Batch 1 acceptance: unit/HTTP contract tests, local API validation, actual browser authorization, persistence across separate processes, and documented platform verification. CI checks macOS, Linux, and Windows; a CI definition is not evidence that all platforms have already passed.
 
@@ -82,7 +87,7 @@ In the following step, distribute prebuilt binaries via GitHub Releases and incl
 
 Distribution is split into two batches. Batch 1 implements shared CI, five native platform builds (macOS ARM64/x64, Linux ARM64/x64, Windows x64), matching CLI/Skill archives, checksums and tag-triggered Releases. Batch 2 uses Homebrew/WinGet for CLI installation and updates, adds a bundled Skill installer, and verifies installation in fresh environments. CLI and Skill share the Cargo version. See [release procedures](releases.md) for triggers, artifacts, runtime boundaries and publication prerequisites.
 
-The 2026-09-09 distribution decision selects Homebrew and WinGet only, with no npm package. Version 0.2.0 adds an embedded Skill installer and generates the package-manager metadata from actual archive hashes. The repository became public on 2026-09-23, and anonymous downloads of all v0.3.0 release archives have been verified. Public tap creation and WinGet submission remain separate publication steps. No self-update daemon or extra CLI runtime dependency is introduced. See [package-manager distribution](package-managers.md).
+The 2026-09-09 distribution decision selects Homebrew and WinGet only, with no npm package. Version 0.2.0 adds an embedded Skill installer and generates the package-manager metadata from actual archive hashes. The repository became public on 2026-09-23, and anonymous downloads of all v0.3.1 release archives have been verified. Public tap creation and WinGet submission remain separate publication steps. No self-update daemon or extra CLI runtime dependency is introduced. See [package-manager distribution](package-managers.md).
 
 ## Production and local testing (2026-09-23)
 
@@ -120,4 +125,4 @@ Commit the application lockfile. Main maintenance costs are dependency/security 
 
 - Batch 1 is implemented, with macOS tests, real browser authorization, native credential persistence, and local Project API verification completed. Linux and Windows verification boundaries are recorded in [validation.md](validation.md).
 - Batch 2 download/manifest and Chart commands are implemented. macOS and Linux ARM64 automated tests pass. Real R2 downloads, DuckDB verification of 100,000 synthetic events, Chart result operations, and rendering in the existing web UI have passed; see [validation.md](validation.md).
-- Batch 3 Skill authoring is implemented in `skills/logcove`, with binary-package installation instructions in [skills.md](skills.md) and actual verification in [skill-validation.md](skill-validation.md). Distribution batch 1 CI/build/package/release automation is implemented. All five platform jobs and Skill checks passed on GitHub Actions at `90ccde0` on 2026-09-09, with all six downloaded archives and checksum generation verified; see [hosted validation](releases.md#hosted-ci-and-artifact-validation-2026-09-09). The first binary release was v0.1.0, using explicit API configuration. The current release is v0.3.0; hosted test deployment is no longer planned. Remaining package-manager publication and platform verification are tracked in [package-manager distribution](package-managers.md).
+- Batch 3 Skill authoring is implemented in `skills/logcove`, with binary-package installation instructions in [skills.md](skills.md) and actual verification in [skill-validation.md](skill-validation.md). Distribution batch 1 CI/build/package/release automation is implemented. All five platform jobs and Skill checks passed on GitHub Actions at `90ccde0` on 2026-09-09, with all six downloaded archives and checksum generation verified; see [hosted validation](releases.md#hosted-ci-and-artifact-validation-2026-09-09). The first binary release was v0.1.0, using explicit API configuration. The current release is v0.3.1; hosted test deployment is no longer planned. Remaining package-manager publication and platform verification are tracked in [package-manager distribution](package-managers.md).

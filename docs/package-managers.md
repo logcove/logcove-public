@@ -89,11 +89,13 @@ At that date these were local checks, before the updated 0.2.0 five-platform wor
 
 ## Remaining publication steps
 
-1. Commit and push the public-state documentation and INSTALL.md; check the raw installation-guide URL without authentication.
-2. Publish the prepared `logcove/homebrew-tap` repository. A tap is a GitHub repository; no separate Homebrew upload account is required. Initial updates can use the maintainer's GitHub access. Cross-repository CI updates would require a separately scoped GitHub credential and are not configured here.
-3. Verify `brew install logcove/tap/logcove` through the actual public tap, then run `brew test logcove/tap/logcove`. Confirm version and PAT support from the installed executable. Promote Homebrew in the main README only after this succeeds.
-4. Resolve the Windows runtime dependency, validate and test the WinGet manifest on Windows, then submit it to `microsoft/winget-pkgs`. Promote the WinGet command only after acceptance into that index.
+The public documentation and INSTALL.md are pushed; the raw guide was downloaded
+without authentication and verified for v0.3.1. The remaining channel work is:
 
-Do not overwrite v0.3.0 assets or move its tag to publish these documents or the tap. Subsequent CLI releases must use a new version; copy their matching generated formula into the tap. Manual tap updates are the initial workflow. Installation-guide updates also need to track the new release and its platform requirements.
+1. Publish `logcove/homebrew-tap` with the formula from v0.3.1's generated metadata. The earlier local staging directory contains v0.3.0 metadata and must not be used as the current formula. A tap is a GitHub repository; no separate Homebrew upload account is required. Initial updates can use the maintainer's GitHub access. Cross-repository CI updates would require a separately scoped GitHub credential and are not configured here.
+2. Verify `brew install logcove/tap/logcove` through the actual public tap, then run `brew test logcove/tap/logcove`. Confirm version and PAT support from the installed executable. Promote Homebrew in the main README only after this succeeds.
+3. Resolve the Windows runtime dependency, validate and test the WinGet manifest on Windows, then submit it to `microsoft/winget-pkgs`. Promote the WinGet command only after acceptance into that index.
+
+Do not overwrite published release assets or move their tags to publish these documents or the tap. Subsequent CLI releases must use a new version; copy their matching generated formula into the tap. Manual tap updates are the initial workflow. Installation-guide updates also need to track the new release and its platform requirements.
 
 References: [Homebrew taps](https://docs.brew.sh/Taps), [Homebrew formula cookbook](https://docs.brew.sh/Formula-Cookbook), [WinGet manifest documentation](https://learn.microsoft.com/windows/package-manager/package/manifest), and [WinGet schemas](https://github.com/microsoft/winget-cli/tree/master/schemas/JSON/manifests/v1.9.0).
