@@ -14,11 +14,19 @@ Local checks passed: 85 Rust tests, strict Clippy and formatting, seven packagin
 tests, two Skill/DuckDB checks, two publishing-workflow checks and tag/version
 validation. One real OS credential-store test remains explicitly ignored.
 
-Publishing uses the unchanged five-platform checks and tag-triggered workflow.
-Homebrew/WinGet metadata remains a release asset; neither package-manager channel
-is enabled by this release. The [workflow run](https://github.com/logcove/logcove-public/actions/workflows/release.yml)
-and published assets establish hosted release completion; earlier entries below
-are historical records.
+[Release run 37114710130](https://github.com/logcove/logcove-public/actions/runs/37114710130)
+passed all five platform jobs, Skill checks, package-manager metadata checks and
+publication at commit `2b2278b`. The stable [v0.3.1 release](https://github.com/logcove/logcove-public/releases/tag/v0.3.1)
+is published with all seven archives and SHA256SUMS.
+
+All seven archives were downloaded without GitHub authentication and matched
+their checksums. Every CLI archive contains the matching Skill, installation
+guide and release notes; the standalone Skill ZIP and package-manager metadata
+also match the release. The downloaded macOS ARM64 binary passed version, help,
+default production API and embedded Skill checks. The public raw installation
+guide matches the updated source. Homebrew/WinGet metadata remains a release
+asset; neither package-manager channel is enabled by this release. Earlier
+entries below are historical records.
 
 ### Public distribution (2026-09-23)
 
@@ -117,7 +125,7 @@ logcove-package-managers-v0.3.1.zip
 SHA256SUMS
 ```
 
-Each CLI archive has a `logcove-v<version>-<target>/` root containing its executable, LICENSE, README.txt, the user-facing README.md, matching public documentation and the small `skills/logcove/` source folder. AGENTS.md is included for the development guide's reference; future archives also include INSTALL.md. This keeps documentation and Skill installation instructions usable after extraction. The separate Skill ZIP supports users who only need the Skill; it contains a directly installable `logcove/` folder with SKILL.md, all four references, LICENSE and VERSION. Install the complete folder using [Skill installation](skills.md).
+Each CLI archive has a `logcove-v<version>-<target>/` root containing its executable, LICENSE, README.txt, the user-facing README.md, matching public documentation and the small `skills/logcove/` source folder. AGENTS.md is included for the development guide's reference; v0.3.1 and newer archives also include INSTALL.md. This keeps documentation and Skill installation instructions usable after extraction. The separate Skill ZIP supports users who only need the Skill; it contains a directly installable `logcove/` folder with SKILL.md, all four references, LICENSE and VERSION. Install the complete folder using [Skill installation](skills.md).
 
 Check downloaded archives against SHA256SUMS before use (`sha256sum` on Linux, `shasum -a 256` on macOS, or `Get-FileHash -Algorithm SHA256` on Windows). These hashes detect file mismatch; they are not a substitute for platform code signing. Downloaded unsigned executables may have a different OS launch experience from local builds; fresh-machine verification and signing decisions remain batch 2 work.
 
