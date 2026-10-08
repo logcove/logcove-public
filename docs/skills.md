@@ -12,7 +12,7 @@ normal service workflow.
 
 ## Prerequisites
 
-- Install the [prebuilt CLI](../README.md#install) v0.3.1 or newer, and ensure `logcove` is on the agent's PATH. Its archive includes the matching `skills/logcove/` folder; the Skill is also available as a [standalone ZIP](https://github.com/logcove/logcove-public/releases/download/v0.3.1/logcove-skills-v0.3.1.zip).
+- Install the [prebuilt CLI](../README.md#install) v0.3.2 or newer, and ensure `logcove` is on the agent's PATH. Its archive includes the matching `skills/logcove/` folder; the Skill is also available as a [standalone ZIP](https://github.com/logcove/logcove-public/releases/download/v0.3.2/logcove-skills-v0.3.2.zip).
 - Authenticate through `logcove login`, or configure `LOGCOVE_TOKEN` through your secret store for automation. The CLI defaults to the production service. See [CLI usage](cli.md) for browser authorization, PAT compatibility and OS credential-store requirements.
 - Provide a local DuckDB environment. Either the DuckDB CLI or Python package can be used; the Skill's examples use Python's `duckdb` package. A renderer is optional for local preview but necessary before claiming visual verification or image export.
 
@@ -37,7 +37,7 @@ logcove skills install --agent codex --force
 
 The command returns JSON with the selected agent, installed path, bundled version, and `installed`/`unchanged` status. CLI upgrades do not silently change an agent's installed Skill. API configuration, sessions and API-key permissions are not involved.
 
-CLI 0.1.0 does not have this command. Upgrade to 0.3.1 or newer to use the current Skill and Project usage fields.
+CLI 0.1.0 does not have this command. Upgrade to 0.3.2 or newer to use the current Skill, Project usage fields and automatic file-refresh retry.
 
 ## Install from a CLI package or checkout
 

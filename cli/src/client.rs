@@ -34,8 +34,13 @@ impl Reply {
                 "ACCESS_DENIED",
                 "This account cannot access the requested resource.",
             ),
+            404 if self.body.pointer("/error/code").and_then(Value::as_str) == Some("FILE_UNAVAILABLE") =>
+                ("FILE_UNAVAILABLE", "The log file is no longer available. Refresh its file list."),
             404 => ("NOT_FOUND", "The resource or API endpoint was not found."),
             409 => match self.body.pointer("/error/code").and_then(Value::as_str) {
+                Some("FILE_SET_CHANGED") => (
+                    "FILE_SET_CHANGED", "Log files changed. Refresh the complete file list.",
+                ),
                 Some("PROJECT_LIMIT_REACHED") => (
                     "PROJECT_LIMIT_REACHED",
                     "Your plan's active Project limit has been reached. Archive a Project or upgrade.",

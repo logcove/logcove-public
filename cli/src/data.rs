@@ -136,49 +136,80 @@ impl<S: CredentialStore> Api<S> {
             ));
         }
         validate_dates(from, to)?;
-        // Always authorize and refresh the complete listing, including already cached dates.
-        let objects = self.log_files(project, from, to)?;
-        let cached = reuse_files(
-            reuse_manifests,
-            &self.origin.origin().ascii_serialization(),
-            project,
-            &objects,
-        )?;
-        fs::create_dir_all(output)
-            .map_err(|_| file_error("Could not create the download directory."))?;
-        let output = output
-            .canonicalize()
-            .map_err(|_| file_error("Could not resolve the download directory."))?;
-        let run = SystemTime::now()
-            .duration_since(UNIX_EPOCH)
-            .map_err(|_| file_error("Invalid system clock."))?
-            .as_nanos();
-        let directory = output.join(format!("pull-{run}-{}", std::process::id()));
-        let builder = fs::DirBuilder::new();
-        #[cfg(unix)]
-        let builder = {
-            use std::os::unix::fs::DirBuilderExt;
-            let mut builder = builder;
-            builder.mode(0o700);
+        let mut recovered: HashMap<String, (LogFile, PathBuf)> = HashMap::new();
+        for attempt in 0..2 {
+            // A refresh starts from page one and replaces the complete file set.
+            let objects = match self.log_files(project, from, to) {
+                Err(error) if attempt == 0 && refreshable(&error) => continue,
+                result => result?,
+            };
+            let mut cached = reuse_files(
+                reuse_manifests,
+                &self.origin.origin().ascii_serialization(),
+                project,
+                &objects,
+            )?;
+            for object in &objects {
+                if let Some((previous, path)) = recovered.get(&object.key) {
+                    if previous.etag == object.etag
+                        && previous.size == object.size
+                        && valid_cached_file(path, object.size)
+                    {
+                        cached
+                            .entry(object.key.clone())
+                            .or_insert_with(|| path.clone());
+                    }
+                }
+            }
+            fs::create_dir_all(output)
+                .map_err(|_| file_error("Could not create the download directory."))?;
+            let output = output
+                .canonicalize()
+                .map_err(|_| file_error("Could not resolve the download directory."))?;
+            let run = SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .map_err(|_| file_error("Invalid system clock."))?
+                .as_nanos();
+            let directory = output.join(format!("pull-{run}-{}-{attempt}", std::process::id()));
+            let builder = fs::DirBuilder::new();
+            #[cfg(unix)]
+            let builder = {
+                use std::os::unix::fs::DirBuilderExt;
+                let mut builder = builder;
+                builder.mode(0o700);
+                builder
+            };
             builder
-        };
-        builder
-            .create(&directory)
-            .map_err(|_| file_error("Could not create a unique pull directory."))?;
-        let result = self.pull_into(
-            project,
-            (from, to),
-            &objects,
-            &directory,
-            (concurrency, &cached),
-        );
-        result.map_err(|mut error| {
-            error.message.push_str(&format!(
-                " Incomplete pull: {}. No completed manifest was published.",
-                directory.display()
-            ));
-            error
-        })
+                .create(&directory)
+                .map_err(|_| file_error("Could not create a unique pull directory."))?;
+            match self.pull_into(
+                project,
+                (from, to),
+                &objects,
+                &directory,
+                (concurrency, &cached),
+            ) {
+                Ok(summary) => return Ok(summary),
+                Err(error) if attempt == 0 && refreshable(&error) => {
+                    // These are private, validated completed downloads; never publish an incomplete manifest.
+                    for (index, object) in objects.into_iter().enumerate() {
+                        let path = directory.join(format!("{index:06}.parquet"));
+                        if valid_cached_file(&path, object.size) {
+                            recovered.insert(object.key.clone(), (object, path));
+                        }
+                    }
+                    eprintln!("Log files changed; refreshing the complete file list once.");
+                }
+                Err(mut error) => {
+                    error.message.push_str(&format!(
+                        " Incomplete pull: {}. No completed manifest was published.",
+                        directory.display()
+                    ));
+                    return Err(error);
+                }
+            }
+        }
+        unreachable!("the final attempt returns its result")
     }
 
     fn log_files(&mut self, project: &str, from: &str, to: &str) -> Result<Vec<LogFile>> {
@@ -571,6 +602,12 @@ fn download(
             "The download link expired or access was denied.",
         ));
     }
+    if response.status().as_u16() == 404 {
+        return Err(Error::new(
+            "FILE_UNAVAILABLE",
+            "The log file is no longer available.",
+        ));
+    }
     if response.status().as_u16() != 200 {
         return Err(Error::new(
             "DOWNLOAD_FAILED",
@@ -651,4 +688,8 @@ fn download_client(direct: bool) -> Result<Client> {
             "Could not initialize the download client.",
         )
     })
+}
+
+fn refreshable(error: &Error) -> bool {
+    matches!(error.code, "FILE_SET_CHANGED" | "FILE_UNAVAILABLE")
 }

@@ -1,6 +1,10 @@
 # CLI validation
 
-Current release (2026-10-03): v0.3.1 is published with Project raw-usage metadata,
+Version v0.3.2 is prepared with compaction-aware download retries and matching
+Skill guidance. Local release checks passed; hosted publication and artifact
+verification are pending. See [release status](releases.md).
+
+Previous release (2026-10-03): v0.3.1 is published with Project raw-usage metadata,
 PAT support, Project/Key management, download reuse and definition-only Charts.
 Local checks passed 85 Rust tests, formatting and strict Clippy; all five hosted
 platform jobs and release checks passed. See [release verification](releases.md).

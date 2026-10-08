@@ -42,7 +42,7 @@ Replace example IDs and dates with discovered values and the selected range. `pr
 {"data":{"project_id":"prj_00000000-0000-4000-8000-000000000001","manifest_path":"/your/output/pull-example/manifest.json","file_count":12,"total_bytes":42000}}
 ```
 
-Each invocation creates a new run directory. Its manifest records `api_url`, `project_id`, `start_date`, `end_date`, `completed_at`, and `files`; each file has an object `key`, `size`, `etag`, `ingest_date`, `uploaded_at`, and relative `path`. The manifest contains no signed URLs. A retry starts a new run, not a resume of an incomplete one. With `--reuse-manifest`, matching files from completed runs are copied locally into the new run; the result remains self-contained. The response also reports `downloaded_file_count` and `reused_file_count`; `file_count` and `total_bytes` include both.
+Each invocation creates a new run directory. Its manifest records `api_url`, `project_id`, `start_date`, `end_date`, `completed_at`, and `files`; each file has an object `key`, `size`, `etag`, `ingest_date`, `uploaded_at`, and relative `path`. The manifest contains no signed URLs. Running the command again starts a new run, not a resume of an incomplete one. With `--reuse-manifest`, matching files from completed runs are copied locally into the new run; the result remains self-contained. The response also reports `downloaded_file_count` and `reused_file_count`; `file_count` and `total_bytes` include both.
 
 For more than 93 ingestion days, use separate bounded pulls only for the requested coverage and data still available from retention. Do not combine overlapping pulls of the same objects as extra events; see [duckdb.md](duckdb.md).
 
@@ -59,6 +59,8 @@ logcove data pull prj_00000000-0000-4000-8000-000000000001 \
 ```
 
 Use real paths discovered locally, and repeat `--reuse-manifest` for additional completed runs of the same API and Project. The CLI checks the latest authorized file listing, matches key/ETag/size, and checks local size and Parquet markers. Only missing, changed, or invalid local files need signed download links and GET requests. Listing still makes API/storage requests. Existing files are copied rather than hard-linked: this avoids another network download, but uses local disk space. Keep existing local files; do not clear the download directory before each analysis. Query only the returned new manifest, which contains both reused and downloaded files; do not append old manifests to it.
+
+The service may reorganize a day's logs into different files. A refreshed listing can therefore replace many previously cached keys with a new key without representing new log events. Query only the new completed manifest. Do not concatenate the old and new files, deduplicate rows to compensate, or infer log time from `uploaded_at`; use the system `_created_time` or the business timestamp required by the question.
 
 A completed manifest is a snapshot of the listed files, not proof that a date partition will never receive more uploads. If the user asks for current data, refresh the relevant dates; do not skip a date merely because some files for it already exist. This includes delayed uploads to earlier ingestion dates. Do not describe an older snapshot as current.
 
@@ -137,6 +139,7 @@ Successful operations return JSON on stdout, usually under `data`. Help/version 
 | `ACCESS_DENIED`, `NOT_FOUND` | Check the selected account and resource; do not restart login automatically |
 | `NETWORK_ERROR`, `SERVER_ERROR`, `RATE_LIMITED` | Report the failure and request ID if present; retry reads only when appropriate, without an unbounded loop |
 | `OBJECT_CHANGED`, `DOWNLOAD_FAILED`, `DOWNLOAD_DENIED` | Do not analyze the incomplete pull; a new pull starts fresh, and `--concurrency 1` may help diagnose connection pressure |
+| `FILE_SET_CHANGED`, `FILE_UNAVAILABLE` | The file set changed during download. CLI 0.3.2 and newer retry the entire listing once and reuse only unchanged validated downloads. If the command still fails, do not analyze its partial files; a later manual pull can retry. Older releases may require rerunning the command manually |
 | `INVALID_CACHE` | Check the supplied completed manifest, API origin and Project; do not edit its identity to force reuse |
 | `PROJECT_LIMIT_REACHED` | The plan's active Project limit is full. Explain the limit; archiving another Project or upgrading requires the user's authorization. Retrying unchanged input will not help |
 | `CHART_CONFLICT` | Read the latest Chart revision and reconcile the definition before retrying |

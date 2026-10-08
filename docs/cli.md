@@ -2,7 +2,7 @@
 
 ## Install
 
-Download the prebuilt CLI for your platform from [v0.3.1](https://github.com/logcove/logcove-public/releases/tag/v0.3.1), extract it, and place `logcove` (`logcove.exe` on Windows) on PATH. Follow the [installation guide](../README.md#install) for macOS, Linux and Windows commands. Rust and a source checkout are not needed.
+Download the prebuilt CLI for your platform from [v0.3.2](https://github.com/logcove/logcove-public/releases/tag/v0.3.2), extract it, and place `logcove` (`logcove.exe` on Windows) on PATH. Follow the [installation guide](../README.md#install) for macOS, Linux and Windows commands. Rust and a source checkout are not needed.
 
 The CLI implements authentication, Project and write-key management, Parquet downloads, and Chart operations. Each CLI package also includes the [analysis Skill](skills.md). CLI commands do not require DuckDB; install DuckDB separately for local analysis. Source builds and development commands are in the [development guide](development.md#local-development).
 
@@ -124,7 +124,7 @@ logcove projects create --name "OTel logs" --ingestion-protocol otlp_http
 
 Use `--ingestion-protocol http_json` for ordinary JSON. `projects update` does not accept the protocol; create a different Project to change formats. The same write Key may bind Projects of different protocols, but each request must use the matching Project and protocol endpoint. This flag requires CLI 0.3.0 and an API with OTLP Project support. A created OTLP Project alone does not prove its collector endpoint is deployed. Use the endpoint supplied by that environment, never guess it from the API host.
 
-Business commands authenticate using `LOGCOVE_TOKEN` when set, or the CLI's stored Session otherwise. The current v0.3.1 and production API support PAT authentication. Write keys authenticate Vector ingestion only; they cannot log in to the CLI or read data.
+Business commands authenticate using `LOGCOVE_TOKEN` when set, or the CLI's stored Session otherwise. The current v0.3.2 and production API support PAT authentication. Write keys authenticate Vector ingestion only; they cannot log in to the CLI or read data.
 
 ```sh
 logcove projects create --name "API logs" --description "Backend request logs"
@@ -187,7 +187,7 @@ The CLI follows all file-list pages and requests signed links in batches of at m
 {"data":{"project_id":"prj_00000000-0000-4000-8000-000000000001","manifest_path":"/your/output/pull-1788825600000000000-1234/manifest.json","file_count":1,"total_bytes":1024}}
 ```
 
-Each invocation creates a new `pull-<time>-<process>` directory inside `--output`. It does not overwrite or resume an incomplete pull. Individual files use numeric local names. Filenames and manifest entries follow the file-list order, independent of download completion order. The manifest is published only after every file succeeds, including a valid empty manifest when there are no files. Read **only files listed in that manifest**, not a glob spanning old runs.
+Each invocation creates a new `pull-<time>-<process>-<attempt>` directory inside `--output`. It does not overwrite an earlier invocation or resume its incomplete pull. Individual files use numeric local names. Filenames and manifest entries follow the file-list order, independent of download completion order. The manifest is published only after every file succeeds, including a valid empty manifest when there are no files. Read **only files listed in that manifest**, not a glob spanning old runs.
 
 To refresh or extend a download while reusing local files, pass a completed manifest (repeat the flag for multiple runs of the same API and Project):
 
@@ -226,7 +226,9 @@ Matching files are copied into the new run, without signing or downloading them,
 
 The CLI checks ETags, byte counts, and Parquet header/footer markers. These checks detect incomplete or changed objects; DuckDB remains responsible for decoding their full contents. A changed ETag aborts the pull. Nearly expired links are refreshed, and a storage 403 gets one re-sign attempt. Storage failures do not remove the CLI login. API requests have a 30-second timeout; each download has a 10-second connection timeout and a 300-second total timeout.
 
-Once the coordinator observes an unrecoverable download or signing failure, it stops starting new work and waits for all started downloads to finish or reach their existing timeout. A failed file's partial file is removed and no completed manifest is published. The error identifies the incomplete run directory; any files completed there, including other in-flight downloads that succeed during shutdown, remain for inspection or manual removal. Retry by running the same command, which starts a new run. Listing is not a storage snapshot: concurrent writes, retention, or replacements can affect a pull.
+Once the coordinator observes an unrecoverable download or signing failure, it stops starting new work and waits for all started downloads to finish or reach their existing timeout. A failed file's partial file is removed and no completed manifest is published. The error identifies the incomplete run directory; any files completed there, including other in-flight downloads that succeed during shutdown, remain for inspection or manual removal. Retry by running the same command, which starts a new run. CLI 0.3.2 and newer recognize `409 FILE_SET_CHANGED`, file-level `404 FILE_UNAVAILABLE`, and storage GET 404. It discards all previous pages and restarts the entire pull once, including fresh authorization. It can reuse completed validated downloads from the first attempt only when the new listing has the same key, ETag and size. Each attempt has a separate directory; only the successful attempt gets a completed manifest. A second such failure is returned, without further automatic retries. Project 404, permission failures, SQL errors and generic conflicts are not file-refresh signals.
+
+A refresh may replace many small-file keys with different keys covering the same logs. Query only the final manifest, never combine it with the old file set. Compaction-aware pagination detects publication changes, but ordinary new uploads still do not provide a transactional storage snapshot.
 
 ## Calculate locally
 
@@ -294,7 +296,7 @@ Normal results are JSON on stdout. Login instructions and warnings use stderr. R
 
 API errors include a request ID when the server supplies one. The CLI does not print raw HTTP error bodies, request headers, access tokens, or credential-store error details. HTTP redirects are refused; configure the final API origin instead.
 
-Common codes include `INVALID_API_URL`, `UNAUTHENTICATED`, `ACCESS_DENIED`, `NOT_FOUND`, `RATE_LIMITED`, `NETWORK_ERROR`, `SERVER_ERROR`, `AUTHORIZATION_DENIED`, `AUTHORIZATION_EXPIRED`, and credential-store errors. Download/input failures additionally include `INVALID_DATE_RANGE`, `FILE_ERROR`, `DOWNLOAD_FAILED`, `DOWNLOAD_DENIED`, `OBJECT_CHANGED`, `INVALID_PARQUET`, `INVALID_INPUT`, and `PAYLOAD_TOO_LARGE`. For Session mode, only authentication failure is a reason to log in again; a 403 or 5xx does not mean the Session expired. In token mode, correct `LOGCOVE_TOKEN` instead of starting browser login.
+Common codes include `INVALID_API_URL`, `UNAUTHENTICATED`, `ACCESS_DENIED`, `NOT_FOUND`, `RATE_LIMITED`, `NETWORK_ERROR`, `SERVER_ERROR`, `AUTHORIZATION_DENIED`, `AUTHORIZATION_EXPIRED`, and credential-store errors. Download/input failures additionally include `INVALID_DATE_RANGE`, `FILE_ERROR`, `DOWNLOAD_FAILED`, `DOWNLOAD_DENIED`, `OBJECT_CHANGED`, `INVALID_PARQUET`, `FILE_SET_CHANGED`, `FILE_UNAVAILABLE`, `INVALID_INPUT`, and `PAYLOAD_TOO_LARGE`. For Session mode, only authentication failure is a reason to log in again; a 403 or 5xx does not mean the Session expired. In token mode, correct `LOGCOVE_TOKEN` instead of starting browser login.
 
 ## Development checks
 

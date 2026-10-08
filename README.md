@@ -21,17 +21,17 @@ You approve browser login yourself; no credentials need to be pasted into chat.
 
 ### Install manually
 
-Download the **v0.3.1** package for your computer. No Rust toolchain or source checkout is needed.
+Download the **v0.3.2** package for your computer. No Rust toolchain or source checkout is needed.
 
 | System | Download |
 | --- | --- |
-| macOS, Apple Silicon (M-series) | [macOS ARM64](https://github.com/logcove/logcove-public/releases/download/v0.3.1/logcove-v0.3.1-aarch64-apple-darwin.tar.gz) |
-| macOS, Intel | [macOS x64](https://github.com/logcove/logcove-public/releases/download/v0.3.1/logcove-v0.3.1-x86_64-apple-darwin.tar.gz) |
-| Linux, x64 | [Linux x64](https://github.com/logcove/logcove-public/releases/download/v0.3.1/logcove-v0.3.1-x86_64-unknown-linux-gnu.tar.gz) |
-| Linux, ARM64 | [Linux ARM64](https://github.com/logcove/logcove-public/releases/download/v0.3.1/logcove-v0.3.1-aarch64-unknown-linux-gnu.tar.gz) |
-| Windows, x64 | [Windows x64](https://github.com/logcove/logcove-public/releases/download/v0.3.1/logcove-v0.3.1-x86_64-pc-windows-msvc.zip) |
+| macOS, Apple Silicon (M-series) | [macOS ARM64](https://github.com/logcove/logcove-public/releases/download/v0.3.2/logcove-v0.3.2-aarch64-apple-darwin.tar.gz) |
+| macOS, Intel | [macOS x64](https://github.com/logcove/logcove-public/releases/download/v0.3.2/logcove-v0.3.2-x86_64-apple-darwin.tar.gz) |
+| Linux, x64 | [Linux x64](https://github.com/logcove/logcove-public/releases/download/v0.3.2/logcove-v0.3.2-x86_64-unknown-linux-gnu.tar.gz) |
+| Linux, ARM64 | [Linux ARM64](https://github.com/logcove/logcove-public/releases/download/v0.3.2/logcove-v0.3.2-aarch64-unknown-linux-gnu.tar.gz) |
+| Windows, x64 | [Windows x64](https://github.com/logcove/logcove-public/releases/download/v0.3.2/logcove-v0.3.2-x86_64-pc-windows-msvc.zip) |
 
-Extract the archive and open a terminal in the extracted `logcove-v0.3.1-...` folder. It contains the CLI, the Skill, and usage guides. [Release notes](https://github.com/logcove/logcove-public/releases/tag/v0.3.1) and [SHA-256 checksums](https://github.com/logcove/logcove-public/releases/download/v0.3.1/SHA256SUMS) are available with the download.
+Extract the archive and open a terminal in the extracted `logcove-v0.3.2-...` folder. It contains the CLI, the Skill, and usage guides. [Release notes](https://github.com/logcove/logcove-public/releases/tag/v0.3.2) and [SHA-256 checksums](https://github.com/logcove/logcove-public/releases/download/v0.3.2/SHA256SUMS) are available with the download.
 
 **macOS / Linux**
 
@@ -93,7 +93,7 @@ logcove skills install --agent codex
 logcove skills install --agent claude
 ```
 
-Start a new agent session if the Skill is not visible. If an older or customized copy is installed, review your changes and rerun with `--force` to replace bundled files. Extra user files are preserved. A [standalone Skill ZIP](https://github.com/logcove/logcove-public/releases/download/v0.3.1/logcove-skills-v0.3.1.zip) and [manual installation instructions](docs/skills.md#install-from-a-cli-package-or-checkout) are also available.
+Start a new agent session if the Skill is not visible. If an older or customized copy is installed, review your changes and rerun with `--force` to replace bundled files. Extra user files are preserved. A [standalone Skill ZIP](https://github.com/logcove/logcove-public/releases/download/v0.3.2/logcove-skills-v0.3.2.zip) and [manual installation instructions](docs/skills.md#install-from-a-cli-package-or-checkout) are also available.
 
 ### 3. Ask about your logs
 

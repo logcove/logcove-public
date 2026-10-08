@@ -2,6 +2,19 @@
 
 ## Status and scope
 
+### v0.3.2 preparation (2026-10-09)
+
+This patch adds one complete file-list refresh when compaction invalidates a
+listing or download. It reuses only unchanged validated downloads and publishes
+a manifest only after success. The matching Skill explains why overlapping old
+and new snapshots must not be combined. See [release notes](release-notes/v0.3.2.md).
+
+Local checks passed: 88 Rust tests, formatting, strict Clippy, seven packaging
+tests, two Skill/DuckDB checks, two publishing-workflow checks, Skill structure
+and tag/version validation. One real OS credential-store test remains ignored.
+Hosted release checks and downloaded-asset verification are pending publication. Homebrew and
+WinGet channel publication remains separate.
+
 ### v0.3.1 (2026-10-03)
 
 This patch preserves Project `usage` in CLI JSON output and updates the bundled
@@ -115,13 +128,13 @@ Branch and PR runs upload the same package format as Actions artifacts, retained
 Starting with version `0.2.0`, a complete release has seven archives plus one checksum file (the released `0.1.0` has no package-manager metadata archive):
 
 ```text
-logcove-v0.3.1-aarch64-apple-darwin.tar.gz
-logcove-v0.3.1-x86_64-apple-darwin.tar.gz
-logcove-v0.3.1-x86_64-unknown-linux-gnu.tar.gz
-logcove-v0.3.1-aarch64-unknown-linux-gnu.tar.gz
-logcove-v0.3.1-x86_64-pc-windows-msvc.zip
-logcove-skills-v0.3.1.zip
-logcove-package-managers-v0.3.1.zip
+logcove-v0.3.2-aarch64-apple-darwin.tar.gz
+logcove-v0.3.2-x86_64-apple-darwin.tar.gz
+logcove-v0.3.2-x86_64-unknown-linux-gnu.tar.gz
+logcove-v0.3.2-aarch64-unknown-linux-gnu.tar.gz
+logcove-v0.3.2-x86_64-pc-windows-msvc.zip
+logcove-skills-v0.3.2.zip
+logcove-package-managers-v0.3.2.zip
 SHA256SUMS
 ```
 
@@ -147,7 +160,7 @@ From the repository root, using Python 3.12 or newer:
 
 ```sh
 python3 -m unittest discover -s scripts/tests -v
-python3 scripts/release.py version --tag v0.3.1
+python3 scripts/release.py version --tag v0.3.2
 ```
 
 Run Skill checks in an isolated environment with `scripts/requirements-ci.txt` installed:

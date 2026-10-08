@@ -869,3 +869,89 @@ fn foreign_project_listing_and_duplicate_cursor_are_rejected() {
     );
     server.finish();
 }
+
+fn file_error_step(status: u16, code: &str, cursor: Option<&str>) -> Step {
+    let mut step = list(vec![], None, cursor);
+    step.status = status;
+    step.response = json!({"error":{"code":code,"message":"Files changed"}}).to_string();
+    step
+}
+
+#[test]
+fn file_set_change_discards_all_previous_pages_once() {
+    let storage = Server::start(vec![download(2)]);
+    let server = Server::start(vec![
+        list(vec![object(0)], Some("old"), None),
+        file_error_step(409, "FILE_SET_CHANGED", Some("old")),
+        list(vec![object(2)], None, None),
+        links(&[2], &storage.origin),
+    ]);
+    let mut api = Api::new(server.origin.clone(), MemoryStore::with_token(TOKEN)).unwrap();
+    let output = Directory::default();
+    let report = api
+        .pull(PROJECT, "2026-09-08", "2026-09-08", &output.0, 1)
+        .unwrap();
+    let manifest: Value =
+        serde_json::from_slice(&std::fs::read(report.manifest_path).unwrap()).unwrap();
+    assert_eq!(manifest["files"].as_array().unwrap().len(), 1);
+    assert_eq!(manifest["files"][0]["key"], key(2));
+}
+
+#[test]
+fn deleted_object_refreshes_whole_pull_and_reuses_only_unchanged_completed_files() {
+    let mut unavailable = download(1);
+    unavailable.status = 404;
+    unavailable.response = "gone".into();
+    let storage = Server::start(vec![download(0), unavailable, download(2)]);
+    let server = Server::start(vec![
+        list(vec![object(0), object(1)], None, None),
+        links(&[0, 1], &storage.origin),
+        list(vec![object(0), object(2)], None, None),
+        links(&[2], &storage.origin),
+    ]);
+    let mut api = Api::new(server.origin.clone(), MemoryStore::with_token(TOKEN)).unwrap();
+    let output = Directory::default();
+    let report = api
+        .pull(PROJECT, "2026-09-08", "2026-09-08", &output.0, 1)
+        .unwrap();
+    assert_eq!((report.file_count, report.reused_file_count), (2, 1));
+    let manifest: Value =
+        serde_json::from_slice(&std::fs::read(report.manifest_path).unwrap()).unwrap();
+    assert_eq!(manifest["files"][1]["key"], key(2));
+    let manifests = std::fs::read_dir(&output.0)
+        .unwrap()
+        .filter(|entry| {
+            entry
+                .as_ref()
+                .unwrap()
+                .path()
+                .join("manifest.json")
+                .exists()
+        })
+        .count();
+    assert_eq!(manifests, 1);
+}
+
+#[test]
+fn refresh_is_bounded_and_does_not_retry_project_not_found_or_forbidden() {
+    for (status, code, expected, attempts) in [
+        (409, "FILE_SET_CHANGED", "FILE_SET_CHANGED", 2),
+        (404, "FILE_UNAVAILABLE", "FILE_UNAVAILABLE", 2),
+        (404, "NOT_FOUND", "NOT_FOUND", 1),
+        (403, "FORBIDDEN", "ACCESS_DENIED", 1),
+    ] {
+        let server = Server::start(
+            (0..attempts)
+                .map(|_| file_error_step(status, code, None))
+                .collect(),
+        );
+        let mut api = Api::new(server.origin.clone(), MemoryStore::with_token(TOKEN)).unwrap();
+        let output = Directory::default();
+        let error = api
+            .pull(PROJECT, "2026-09-08", "2026-09-08", &output.0, 4)
+            .err()
+            .unwrap();
+        assert_eq!(error.code, expected);
+        assert_eq!(std::fs::read_dir(&output.0).unwrap().count(), 0);
+    }
+}

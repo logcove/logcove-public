@@ -1,6 +1,10 @@
 # Analysis Skill validation
 
-Current release (2026-10-03): the matching online-service Skill is published with
+Version v0.3.2 is prepared with compaction-aware download retries and matching
+Skill guidance. Local release checks passed; hosted publication and artifact
+verification are pending. See [release status](releases.md).
+
+Previous release (2026-10-03): the matching online-service Skill is published with
 CLI v0.3.1 and as a standalone ZIP. Skill/DuckDB and five-platform release checks
 passed; downloaded archives match their published checksums. See [release verification](releases.md).
 The dated instruction-review and rendering evidence below is historical, not a

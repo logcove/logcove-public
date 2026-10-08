@@ -1,8 +1,12 @@
 # Homebrew and WinGet distribution
 
+Version v0.3.2 is prepared with compaction-aware download retries and matching
+Skill guidance. Local release checks passed; hosted publication and artifact
+verification are pending. See [release status](releases.md).
+
 ## Status
 
-Homebrew and WinGet are the selected package-manager channels. There is no npm package. The repository is public as of 2026-09-23. The latest release is v0.3.1 (2026-10-03); all seven archives were downloaded anonymously and verified against the release's SHA256SUMS. The generated formula and WinGet manifests match the downloaded archives' URLs and hashes.
+Homebrew and WinGet are the selected package-manager channels. There is no npm package. The repository is public as of 2026-09-23. The previous verified release is v0.3.1 (2026-10-03); all seven archives were downloaded anonymously and verified against the release's SHA256SUMS. The generated formula and WinGet manifests match the downloaded archives' URLs and hashes.
 
 Install the CLI from its [release archive](../README.md#install-manually), or give the [installation guide](../INSTALL.md) to your agent. Public package-manager installation is not available yet: the Homebrew tap has not been published, and no WinGet manifest has been submitted.
 
