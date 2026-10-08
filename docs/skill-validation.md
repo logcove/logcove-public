@@ -1,8 +1,9 @@
 # Analysis Skill validation
 
-Version v0.3.2 is prepared with compaction-aware download retries and matching
-Skill guidance. Local release checks passed; hosted publication and artifact
-verification are pending. See [release status](releases.md).
+Current release (2026-10-09): v0.3.2 is published with compaction-aware download
+retries and matching Skill guidance. Local checks and all five hosted platform
+jobs passed. All seven archives were downloaded anonymously and matched their
+checksums; macOS ARM64 binary smoke checks passed. See [release status](releases.md).
 
 Previous release (2026-10-03): the matching online-service Skill is published with
 CLI v0.3.1 and as a standalone ZIP. Skill/DuckDB and five-platform release checks

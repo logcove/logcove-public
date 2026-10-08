@@ -338,45 +338,65 @@ fn concurrent_downloads_fill_free_slots_reuse_connections_and_keep_manifest_orde
 
 #[test]
 fn concurrent_failure_joins_active_downloads_and_leaves_no_manifest() {
-    let storage = downloads::Storage::start(|index, _, monitor| {
-        monitor.wait_for(|s| s.started.len() >= 3);
-        if index == 0 {
-            return (200, "this-is-not-par1!".into());
+    for success_before_failure in [false, true] {
+        let expected_started = if success_before_failure {
+            vec![0, 1, 2, 3]
+        } else {
+            vec![0, 1, 2]
+        };
+        let storage = downloads::Storage::start(move |index, _, monitor| {
+            monitor.wait_for(|s| s.started.len() >= 3);
+            if success_before_failure {
+                if index == 2 {
+                    return (200, BYTES.into());
+                }
+                // Release failures only after the successful download frees a slot.
+                monitor.wait_for(|s| s.started.contains(&3));
+            }
+            // Every remaining result fails, regardless of worker completion order.
+            (200, "this-is-not-par1!".into())
+        });
+        let server = Server::start(vec![
+            list((0..6).map(object).collect(), None, None),
+            links(&(0..6).collect::<Vec<_>>(), &storage.origin),
+        ]);
+        let mut api = Api::new(server.origin.clone(), MemoryStore::with_token(TOKEN)).unwrap();
+        let output = Directory::default();
+        let error = api
+            .pull(PROJECT, "2026-09-08", "2026-09-08", &output.0, 3)
+            .err()
+            .unwrap();
+        assert_eq!(error.code, "INVALID_PARQUET");
+        assert!(!error.message.contains("private-signature"));
+        let mut stats = storage.monitor.snapshot();
+        assert_eq!(stats.active, 0);
+        stats.started.sort();
+        stats.finished.sort();
+        assert_eq!(stats.started, expected_started);
+        assert_eq!(stats.finished, stats.started);
+        let run = std::fs::read_dir(&output.0)
+            .unwrap()
+            .next()
+            .unwrap()
+            .unwrap()
+            .path();
+        let names: Vec<_> = std::fs::read_dir(&run)
+            .unwrap()
+            .map(|p| p.unwrap().file_name())
+            .collect();
+        if success_before_failure {
+            assert_eq!(names, ["000002.parquet"]);
+            assert_eq!(
+                std::fs::read_to_string(run.join("000002.parquet")).unwrap(),
+                BYTES
+            );
+        } else {
+            assert!(names.is_empty());
         }
-        monitor.wait_for(|s| s.finished.contains(&0));
-        std::thread::sleep(std::time::Duration::from_millis(100));
-        (200, BYTES.into())
-    });
-    let server = Server::start(vec![
-        list((0..6).map(object).collect(), None, None),
-        links(&(0..6).collect::<Vec<_>>(), &storage.origin),
-    ]);
-    let mut api = Api::new(server.origin.clone(), MemoryStore::with_token(TOKEN)).unwrap();
-    let output = Directory::default();
-    let error = api
-        .pull(PROJECT, "2026-09-08", "2026-09-08", &output.0, 3)
-        .err()
-        .unwrap();
-    assert_eq!(error.code, "INVALID_PARQUET");
-    assert!(!error.message.contains("private-signature"));
-    let stats = storage.monitor.snapshot();
-    assert_eq!(stats.active, 0);
-    assert_eq!(stats.finished.len(), 3);
-    let run = std::fs::read_dir(&output.0)
-        .unwrap()
-        .next()
-        .unwrap()
-        .unwrap()
-        .path();
-    let mut names: Vec<_> = std::fs::read_dir(run)
-        .unwrap()
-        .map(|p| p.unwrap().file_name())
-        .collect();
-    names.sort();
-    assert_eq!(names, ["000001.parquet", "000002.parquet"]);
-    let stats = storage.finish();
-    assert_eq!(stats.started.len(), 3);
-    server.finish();
+        let final_stats = storage.finish();
+        assert_eq!(final_stats.started.len(), stats.started.len());
+        server.finish();
+    }
 }
 
 #[test]

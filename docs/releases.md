@@ -2,7 +2,7 @@
 
 ## Status and scope
 
-### v0.3.2 preparation (2026-10-09)
+### v0.3.2 (2026-10-09)
 
 This patch adds one complete file-list refresh when compaction invalidates a
 listing or download. It reuses only unchanged validated downloads and publishes
@@ -12,8 +12,17 @@ and new snapshots must not be combined. See [release notes](release-notes/v0.3.2
 Local checks passed: 88 Rust tests, formatting, strict Clippy, seven packaging
 tests, two Skill/DuckDB checks, two publishing-workflow checks, Skill structure
 and tag/version validation. One real OS credential-store test remains ignored.
-Hosted release checks and downloaded-asset verification are pending publication. Homebrew and
-WinGet channel publication remains separate.
+[Release run 37927431144](https://github.com/logcove/logcove-public/actions/runs/37927431144)
+passed all five platform jobs, Skill checks, package-manager metadata checks and
+publication at commit `552b92e`. The stable [v0.3.2 release](https://github.com/logcove/logcove-public/releases/tag/v0.3.2)
+is published with seven archives and SHA256SUMS.
+
+All seven archives were downloaded anonymously and matched their checksums.
+Every CLI archive contains the matching Skill, installation guide and release
+notes; the standalone Skill ZIP also matches the source. The downloaded macOS
+ARM64 binary passed version, help and default production API checks. Homebrew
+and WinGet channel publication remains separate. Native credential-store and
+fresh-machine installation acceptance were not rerun for this patch.
 
 ### v0.3.1 (2026-10-03)
 

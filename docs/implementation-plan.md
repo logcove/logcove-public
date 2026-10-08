@@ -1,8 +1,9 @@
 # Implementation plan
 
-Version v0.3.2 is prepared with compaction-aware download retries and matching
-Skill guidance. Local release checks passed; hosted publication and artifact
-verification are pending. See [release status](releases.md).
+Current release (2026-10-09): v0.3.2 is published with compaction-aware download
+retries and matching Skill guidance. Local checks and all five hosted platform
+jobs passed. All seven archives were downloaded anonymously and matched their
+checksums; macOS ARM64 binary smoke checks passed. See [release status](releases.md).
 
 Agreed on 2026-09-08. This document distinguishes planned capabilities from implemented and verified behavior; a plan is not a release announcement.
 
@@ -129,4 +130,4 @@ Commit the application lockfile. Main maintenance costs are dependency/security 
 
 - Batch 1 is implemented, with macOS tests, real browser authorization, native credential persistence, and local Project API verification completed. Linux and Windows verification boundaries are recorded in [validation.md](validation.md).
 - Batch 2 download/manifest and Chart commands are implemented. macOS and Linux ARM64 automated tests pass. Real R2 downloads, DuckDB verification of 100,000 synthetic events, Chart result operations, and rendering in the existing web UI have passed; see [validation.md](validation.md).
-- Batch 3 Skill authoring is implemented in `skills/logcove`, with binary-package installation instructions in [skills.md](skills.md) and actual verification in [skill-validation.md](skill-validation.md). Distribution batch 1 CI/build/package/release automation is implemented. All five platform jobs and Skill checks passed on GitHub Actions at `90ccde0` on 2026-09-09, with all six downloaded archives and checksum generation verified; see [hosted validation](releases.md#hosted-ci-and-artifact-validation-2026-09-09). The first binary release was v0.1.0, using explicit API configuration. The previous release is v0.3.1; hosted test deployment is no longer planned. Remaining package-manager publication and platform verification are tracked in [package-manager distribution](package-managers.md).
+- Batch 3 Skill authoring is implemented in `skills/logcove`, with binary-package installation instructions in [skills.md](skills.md) and actual verification in [skill-validation.md](skill-validation.md). Distribution batch 1 CI/build/package/release automation is implemented. All five platform jobs and Skill checks passed on GitHub Actions at `90ccde0` on 2026-09-09, with all six downloaded archives and checksum generation verified; see [hosted validation](releases.md#hosted-ci-and-artifact-validation-2026-09-09). The first binary release was v0.1.0, using explicit API configuration. The current release is v0.3.2; hosted test deployment is no longer planned. Remaining package-manager publication and platform verification are tracked in [package-manager distribution](package-managers.md).

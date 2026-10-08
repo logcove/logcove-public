@@ -1,8 +1,9 @@
 # Homebrew and WinGet distribution
 
-Version v0.3.2 is prepared with compaction-aware download retries and matching
-Skill guidance. Local release checks passed; hosted publication and artifact
-verification are pending. See [release status](releases.md).
+Current release (2026-10-09): v0.3.2 is published with compaction-aware download
+retries and matching Skill guidance. Local checks and all five hosted platform
+jobs passed. All seven archives were downloaded anonymously and matched their
+checksums; macOS ARM64 binary smoke checks passed. See [release status](releases.md).
 
 ## Status
 
@@ -63,7 +64,7 @@ For maintainer validation against an already downloaded release, `--version 0.1.
 
 The shared CI workflow waits for all CLI and Skill packages, generates the metadata, checks Homebrew URL/hash pairs and Ruby syntax, and validates the three WinGet YAML files against Microsoft's versioned 1.9.0 JSON schemas. It also checks that WinGet's nested executable path exists in the real ZIP. `jsonschema` is a CI-only dependency; the generator and CLI add no runtime dependency. Schema validation fetches the official versioned schema files and requires network access, but no user credentials.
 
-The metadata ZIP is included in each release with SHA256SUMS, including v0.3.1. Generating it does not publish to Homebrew or WinGet. Ruby/schema checks do not establish a real package-manager install or WinGet review acceptance.
+The metadata ZIP is included in each release with SHA256SUMS, including v0.3.2. Generating it does not publish to Homebrew or WinGet. Ruby/schema checks do not establish a real package-manager install or WinGet review acceptance.
 
 ## Public-release preparation (2026-09-23)
 
@@ -94,9 +95,9 @@ At that date these were local checks, before the updated 0.2.0 five-platform wor
 ## Remaining publication steps
 
 The public documentation and INSTALL.md are pushed; the raw guide was downloaded
-without authentication and verified for v0.3.1. The remaining channel work is:
+without authentication and verified for v0.3.2. The remaining channel work is:
 
-1. Publish `logcove/homebrew-tap` with the formula from v0.3.1's generated metadata. The earlier local staging directory contains v0.3.0 metadata and must not be used as the current formula. A tap is a GitHub repository; no separate Homebrew upload account is required. Initial updates can use the maintainer's GitHub access. Cross-repository CI updates would require a separately scoped GitHub credential and are not configured here.
+1. Publish `logcove/homebrew-tap` with the formula from v0.3.2's generated metadata. The earlier local staging directory contains v0.3.0 metadata and must not be used as the current formula. A tap is a GitHub repository; no separate Homebrew upload account is required. Initial updates can use the maintainer's GitHub access. Cross-repository CI updates would require a separately scoped GitHub credential and are not configured here.
 2. Verify `brew install logcove/tap/logcove` through the actual public tap, then run `brew test logcove/tap/logcove`. Confirm version and PAT support from the installed executable. Promote Homebrew in the main README only after this succeeds.
 3. Resolve the Windows runtime dependency, validate and test the WinGet manifest on Windows, then submit it to `microsoft/winget-pkgs`. Promote the WinGet command only after acceptance into that index.
 
