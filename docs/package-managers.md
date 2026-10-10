@@ -27,7 +27,7 @@ winget install --id Logcove.Logcove --exact --source winget
 winget upgrade --id Logcove.Logcove --exact --source winget
 ```
 
-`Logcove.Logcove` is the proposed package identifier, not an already registered package. Both installation definitions download a prebuilt binary rather than compile Rust. Linux uses the existing GNU/glibc archives and still needs a running, unlocked Secret Service for login.
+`Logcove.Logcove` is the proposed package identifier, not an already registered package. Both installation definitions download a prebuilt binary rather than compile Rust. Linux uses the existing GNU/glibc archives and in published v0.3.2 needs an unlocked Secret Service for browser login; the unreleased file-storage update removes that requirement.
 
 CLI 0.2.0 and newer also provide the matching Skill without a separate download:
 
@@ -81,7 +81,7 @@ These local staging directories are ignored by Git. Release assets remain unchan
 
 The existing Windows manifest does not declare the x64 Visual C++ Runtime dependency. Before submitting it to WinGet, add the dependency to the generator, validate with native WinGet, and test installation on Windows without a preinstalled runtime. This remains deferred; schema validation alone does not cover it.
 
-Linux ARM64 binaries use Ubuntu 24.04 / glibc 2.39. The current formula does not reject older glibc environments in advance. Document this requirement and verify Linux installation before claiming general Linux compatibility. Browser login also needs an unlocked Secret Service; PAT authentication does not.
+Linux ARM64 binaries use Ubuntu 24.04 / glibc 2.39. The current formula does not reject older glibc environments in advance. Document this requirement and verify Linux installation before claiming general Linux compatibility. Published v0.3.2 browser login also needs an unlocked Secret Service; PAT authentication and the unreleased file-based login do not.
 
 ## Local validation (2026-09-09)
 

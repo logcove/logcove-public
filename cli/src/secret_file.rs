@@ -60,7 +60,7 @@ fn file_error() -> Error {
 }
 
 #[cfg(unix)]
-fn create_private(path: &Path) -> io::Result<File> {
+pub(crate) fn create_private(path: &Path) -> io::Result<File> {
     use std::os::unix::fs::OpenOptionsExt;
     fs::OpenOptions::new()
         .write(true)
@@ -70,7 +70,7 @@ fn create_private(path: &Path) -> io::Result<File> {
 }
 
 #[cfg(windows)]
-fn create_private(path: &Path) -> io::Result<File> {
+pub(crate) fn create_private(path: &Path) -> io::Result<File> {
     use std::{
         os::windows::{ffi::OsStrExt, io::FromRawHandle},
         ptr,

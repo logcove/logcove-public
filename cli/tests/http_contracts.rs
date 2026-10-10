@@ -1,8 +1,11 @@
 mod support;
 
-use logcove::{client::Api, credentials::CredentialStore};
+use logcove::{
+    client::Api,
+    credentials::{CredentialStore, FileCredentials},
+};
 use serde_json::json;
-use support::{FakeClock, MemoryStore, Server, Step};
+use support::{Directory, FakeClock, MemoryStore, Server, Step};
 
 const TOKEN: &str = "test-session.signature";
 const NEXT: &str = "renewed-session.signature";
@@ -81,6 +84,50 @@ fn browser_login_pending_slow_down_and_persistence_across_clients() {
     let mut restarted = Api::new(server.origin.clone(), store.clone()).unwrap();
     assert_eq!(restarted.whoami().unwrap().email, "test@example.test");
     assert_eq!(store.0.borrow().saves, 1);
+    server.finish();
+}
+
+#[test]
+fn file_sessions_survive_login_renewal_restart_and_logout() {
+    let server = Server::start(vec![
+        begin(600),
+        approved(),
+        Step::json(
+            "GET",
+            "/api/v1/me",
+            Some(TOKEN),
+            200,
+            json!({"data":user()}),
+        )
+        .header("set-auth-token", NEXT),
+        Step::json("GET", "/api/v1/me", Some(NEXT), 200, json!({"data":user()})),
+        Step::json(
+            "POST",
+            "/api/auth/sign-out",
+            Some(NEXT),
+            200,
+            json!({"success":true}),
+        ),
+    ]);
+    let root = Directory::default();
+    let store = || FileCredentials::in_directory(root.0.clone(), server.origin.as_str()).unwrap();
+    let mut api = Api::new(server.origin.clone(), store()).unwrap();
+    let authorization = api.begin_login().unwrap();
+    api.complete_login(&authorization, &mut FakeClock::default())
+        .unwrap();
+    assert_eq!(store().read().unwrap().as_deref(), Some(TOKEN));
+    drop(api);
+    let mut api = Api::new(server.origin.clone(), store()).unwrap();
+    api.whoami().unwrap();
+    assert_eq!(store().read().unwrap().as_deref(), Some(NEXT));
+    drop(api);
+    let mut api = Api::new(server.origin.clone(), store()).unwrap();
+    api.whoami().unwrap();
+    api.logout().unwrap();
+    assert!(store().read().unwrap().is_none());
+    assert!(!std::fs::read_to_string(root.0.join("auth.json"))
+        .unwrap()
+        .contains(NEXT));
     server.finish();
 }
 

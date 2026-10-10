@@ -70,27 +70,45 @@ Successful login prints account JSON only:
 
 ## Credential persistence
 
-Browser login uses a signed Bearer Session, not a JWT or a Vector write key. Session credentials are stored in the OS credential service with service name `com.logcove.cli.session` and account equal to the canonical API origin.
+The current source implementation stores a signed Bearer Session in
+`~/.logcove/auth.json` (`%USERPROFILE%\.logcove\auth.json` on Windows). This is
+not an account password, JWT or Vector write key. **This change is not released
+in v0.3.2**: published v0.3.2 and earlier binaries use the OS credential store.
+See the [file-credential plan and migration](file-credentials.md).
 
-| Platform | Backend | Requirement |
-| --- | --- | --- |
-| macOS | Keychain | Allow this CLI to access its own credential |
-| Windows | Credential Manager | Run as the Windows user who logged in |
-| Linux | Secret Service | A running and unlocked provider such as GNOME Keyring or KWallet, accessible through the user's session D-Bus |
+After upgrading to a file-based build, run `logcove login` once. The CLI does not
+read, migrate or delete old Keychain/Credential Manager/Secret Service entries.
+Desktop login is unchanged. File-based builds need no desktop keyring service.
 
-API origins are separate identities, including ports. CLI and desktop credentials are independent; logging out of one does not log out of the other. Different config directories pointing at the same origin share that origin's CLI credential. Avoid switching to root/sudo to run the CLI: that changes the OS user and credential store.
+The file contains a `sessions` map keyed by canonical API origin, including
+ports. CLI and desktop Sessions are independent. `--config-dir` and
+`LOGCOVE_CONFIG_DIR` still select non-secret configuration only; different config
+directories targeting the same API share the same user's CLI Session.
 
-The CLI saves changed `set-auth-token` headers returned by authenticated requests. A 401 clears the local credential only if it still matches the failed request's Session, preserving a newer login saved by another process. Permission failures, server errors, and network errors retain the credential. If saving a renewed credential fails, the operation still succeeds and stderr explains the persistence failure; the current process continues using the renewed token.
+Unix credential directories are `0700` and files are `0600`; Windows credential
+files are created with a protected owner-only DACL. The tokens are plaintext:
+processes running as your user can read them. Never copy `auth.json` into source
+control, tool output or agent conversations.
 
-Credential writes and conditional deletion share a short cross-process file lock under the OS local-data directory at `logcove/credentials.lock`. The file contains no credential; the Session remains in the OS credential store. The lock also covers CLI invocations using different config directories.
+All store operations take `~/.logcove/credentials.lock`. Updates write and sync a
+private temporary file, then replace `auth.json` in the same directory. The lock
+contains no secrets. Missing files mean logged out; malformed files and storage
+errors are reported without exposing their contents or silently resetting them.
 
-If the initial login credential cannot be saved, login fails and attempts to revoke the newly issued session. It does not claim a persistent login succeeded. There is no automatic plaintext fallback. Headless noninteractive PAT authentication is described below; it does not use a credential store.
+Changed `set-auth-token` headers are persisted. A 401 clears only the matching
+stored Session, preserving a newer login from another process. Permission,
+server and network failures retain the Session. Renewal persistence failures
+produce a warning while the successful request and in-memory renewal remain
+usable. Initial login persistence failure attempts to revoke the new server
+Session and does not claim persistent login succeeded.
+
+`LOGCOVE_TOKEN` takes priority and never reads or writes the Session file.
 
 ```sh
 logcove logout
 ```
 
-Logout revokes the CLI's server Session before deleting the matching local entry; a newer Session saved by another process is preserved. Remote failures leave it available for a retry. If the remote session is already invalid, remove only its matching stale local entry. A local deletion failure is reported distinctly; retry after unlocking the store. Calling logout when no credential exists succeeds without a network request.
+Logout revokes the CLI's server Session before deleting the matching local entry; a newer Session saved by another process is preserved. Remote failures leave it available for a retry. If the remote session is already invalid, remove only its matching stale local entry. A local deletion failure is reported distinctly; retry after correcting the reported credential-storage problem. Calling logout when no credential exists succeeds without a network request.
 
 ## Discover Projects
 
@@ -141,7 +159,7 @@ The Key creation command returns public metadata and an absolute `key_file` path
 {"data":{"id":"key_00000000-0000-4000-8000-000000000001","name":"API collector","key_prefix":"lc_01234567","masked_key":"lc_01234567***","project_ids":["prj_00000000-0000-4000-8000-000000000001"],"revoked_at":null,"created_at":"2026-09-10T00:00:00Z","updated_at":"2026-09-10T00:00:00Z","key_file":"/path/to/private/api-collector.key"}}
 ```
 
-The file contains the raw Key followed by a newline. The command never returns the plaintext Key or its hash on stdout/stderr. The destination is reserved before the API request and is never overwritten, including symlinks. Unix permissions are `0600`; Windows creates the file with a protected owner-only DACL. Windows alternate data streams are rejected. Keep this credential file private and pass its path to collector configuration code instead of copying its contents into an agent conversation. These files are separate from login Sessions, which remain in the OS credential store.
+The file contains the raw Key followed by a newline. The command never returns the plaintext Key or its hash on stdout/stderr. The destination is reserved before the API request and is never overwritten, including symlinks. Unix permissions are `0600`; Windows creates the file with a protected owner-only DACL. Windows alternate data streams are rejected. Keep this credential file private and pass its path to collector configuration code instead of copying its contents into an agent conversation. These files are separate from the CLI login Session file.
 
 | Command | Behavior |
 | --- | --- |
@@ -307,13 +325,16 @@ cargo test --workspace --locked
 cargo build --release --locked
 ```
 
-Normal tests use fake credentials and a local HTTP server, not real accounts. An explicit OS-store smoke test uses disposable fake credentials under a unique `.invalid` origin and separate processes, then removes its entries:
+Normal tests use fake credentials and local HTTP fixtures, not real accounts.
+File-store checks use isolated directories and include process-to-process
+persistence, concurrent writers, permissions and conditional deletion:
 
 ```sh
-cargo test --locked --test native_credentials -- --ignored --nocapture
+cargo test --locked --test file_credentials
 ```
 
-Run that test only in a configured OS credential environment. CI performs build and mocked HTTP/credential checks on macOS, Linux, and Windows; it does not assume hosted runners have an unlocked desktop keyring. Actual verification results are recorded in [validation.md](validation.md).
+These tests run in normal CI without a desktop keyring. Actual platform runtime
+verification is recorded in [validation.md](validation.md).
 
 
 ## Personal tokens for automation

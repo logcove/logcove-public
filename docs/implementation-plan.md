@@ -58,9 +58,19 @@ Only HTTPS origins and loopback HTTP development origins are accepted. URL crede
 
 Login reuses the device authorization protocol with `client_id=logcove-cli`. Open the service's `verification_uri_complete` without reconstructing it. Print the link and verification code for manual use, including SSH terminals. Poll according to the returned interval and expiry, increase the interval on `slow_down`, and stop on denial/expiry. This is distinct from the desktop application's deep-link callback. No new server authentication endpoints are required.
 
-The credential is a signed Better Auth Bearer Session, not a JWT and not a Vector write key. Store it through `keyring` with service `com.logcove.cli.session`, keyed by canonical API origin. CLI and desktop use separate Sessions and credential entries. The config directory is not part of credential identity: two invocations targeting the same API share the CLI credential even if their config directories differ.
+The credential is a signed Better Auth Bearer Session, not a JWT or Vector write
+key. The current source stores it in `~/.logcove/auth.json`, keyed by canonical
+API origin, using private file permissions, atomic replacement and a per-user
+lock. Published v0.3.2 and earlier use `keyring`; the switch is not yet released.
+See [file credentials](file-credentials.md) for the implementation and migration.
+CLI and desktop Sessions are independent; configuration directories do not
+change the shared per-user Session identity.
 
-Persist changed `set-auth-token` response headers and carry the new token into subsequent requests. Invalid Sessions are cleared only if the stored credential still matches the failed request, preserving a newer login. Permission failures, server errors, and network failures do not delete valid credentials. Logout revokes the server Session before deleting its matching local entry; a failed remote logout remains retryable. OS credential writes and conditional deletion share a per-user file lock containing no secrets. Do not silently fall back to plaintext files. Browser login on Linux requires a running, unlocked Secret Service. PAT mode uses `LOGCOVE_TOKEN` and bypasses the OS credential store; invalid or empty environment tokens never fall back to a saved Session.
+Persist changed `set-auth-token` headers. A 401 or logout removes only the
+matching stored Session, preserving newer logins. Network/server/permission
+failures retain the Session. Logout revokes the remote Session first. PAT mode
+uses `LOGCOVE_TOKEN` without reading or writing the Session file; invalid or
+empty environment tokens never fall back to a saved Session.
 
 Project listing traverses all `/api/v1/projects` pages, including empty pages with a next cursor. It defaults to active sources; `--status archived` or `--status all` includes archived metadata, which does not authorize reading archived logs. Detail uses `/api/v1/projects/{id}` and may describe an owned archived Project. Project names and descriptions provide context; they do not establish the actual Parquet schema.
 
@@ -119,12 +129,12 @@ CLI v0.3.0 uses `https://api.logcove.com` as the built-in fallback, after `--api
 | `clap` | Typed command parsing and help instead of handwritten argument parsing |
 | `reqwest` with `rustls` | Blocking HTTPS and streaming downloads without system OpenSSL |
 | `serde` / `serde_json` | Explicit API contracts and JSON serialization |
-| `keyring` 3.6.3 | Same mature OS credential abstraction as the desktop, with an independent identity; plaintext persistence is not an automatic fallback |
+| Rust standard file APIs + existing `windows-sys` | Private Session files, cross-process locking and atomic replacement; replaces `keyring` in the unreleased source |
 | `directories` | OS-specific configuration paths without hand-coded platform rules |
 | `open` | Open the existing browser with platform handling; manual links remain available |
 | `time` | Parse calendar dates and timezone-aware link timestamps instead of maintaining handwritten leap-year and timestamp parsing; one pinned dependency with Rust-version and timezone-format checks |
 
-Commit the application lockfile. Main maintenance costs are dependency/security updates, OS credential service differences, and cross-platform binary validation. Do not add async task orchestration, terminal UI frameworks, or a cross-repository shared SDK for this scope.
+Commit the application lockfile. Main maintenance costs are dependency/security updates, cross-platform file permissions, and cross-platform binary validation. Do not add async task orchestration, terminal UI frameworks, or a cross-repository shared SDK for this scope.
 
 ## Progress
 

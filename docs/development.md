@@ -20,6 +20,10 @@ Read [AGENTS.md](../AGENTS.md) before changing code. Keep credentials, real logs
 
 ## Local development
 
+Current source uses private file credentials; published v0.3.2 still uses the OS
+store. Read [the storage contract and upgrade boundary](file-credentials.md)
+before testing login. Tests use temporary directories and fake Sessions.
+
 Use Rust 1.90 or newer and the committed Cargo.lock. End users can install the prebuilt CLI from the [Release](https://github.com/logcove/logcove-public/releases/tag/v0.3.2); building from source is for development.
 
 ```sh

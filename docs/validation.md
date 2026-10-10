@@ -1,5 +1,21 @@
 # CLI validation
 
+## File credentials (2026-10-10, unreleased)
+
+The current source stores Sessions in `~/.logcove/auth.json`; published v0.3.2
+still uses the OS store. macOS ARM64 and Linux ARM64 passed all 97 Rust tests,
+including cross-process persistence, concurrent per-origin updates, private
+permissions, failed-write recovery, conditional deletion, login/renewal/logout
+with HTTP fixtures, and PATs bypassing even corrupted credential files.
+
+Strict Clippy, formatting, macOS release compilation, seven packaging tests,
+two Skill/DuckDB checks and two publishing-workflow checks passed. Credential
+modules and tests passed an isolated Windows GNU type check; native Windows
+execution remains pending. No real user credentials were read or changed.
+See [the storage contract and verification scope](file-credentials.md).
+
+## Published release and historical checks
+
 Current release (2026-10-09): v0.3.2 is published with compaction-aware download
 retries and matching Skill guidance. Local checks and all five hosted platform
 jobs passed. All seven archives were downloaded anonymously and matched their

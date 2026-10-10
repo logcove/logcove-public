@@ -15,7 +15,7 @@ Once this check passes, run `logcove whoami`. Only when `LOGCOVE_TOKEN` is absen
 
 The CLI defaults to `https://api.logcove.com`; run `logcove login` without configuring an address. Use `logcove config show` to confirm that target before authenticated operations. Report a mismatch without silently changing configuration. If an older CLI reports `API_NOT_CONFIGURED`, explain that it needs an update.
 
-Browser login uses a signed Bearer Session, not a JWT or ingestion write key. The CLI stores it in the OS credential service, independently of the desktop app. Do not read the keychain, request a Session token from the user, put Session tokens in shell commands, or build Session Authorization headers. Log ingestion uses a separate write-key header as described in [ingestion.md](ingestion.md).
+Browser login uses a signed Bearer Session, not a JWT or ingestion write key. The CLI manages its persistence independently of the desktop app. File-based installations use `~/.logcove/auth.json`; CLI 0.3.2 and earlier use the OS credential service. Do not read the credential file or keychain, request a Session token from the user, put Session tokens in shell commands, or build Session Authorization headers. Log ingestion uses a separate write-key header as described in [ingestion.md](ingestion.md).
 
 `logcove login --no-browser` prints a link and waits for browser approval. An expired or denied request needs a new login attempt, not repeated approval of the old link. Do not log out or change accounts merely to diagnose a download error.
 
@@ -23,7 +23,7 @@ Browser login uses a signed Bearer Session, not a JWT or ingestion write key. Th
 
 A CLI version with personal-token support accepts `LOGCOVE_TOKEN` from the user's environment or CI secret store. The rebuilt v0.3.0 supports it, but original v0.3.0 binaries do not; follow the compatibility check above before making authenticated requests. With a supported CLI, run `logcove whoami` directly, without `login`. The token identifies an account and grants Full access to its business resources, subject to existing ownership, quota and retention rules. It cannot access Billing, account-security endpoints or PAT management.
 
-Token mode bypasses the OS credential service, so Linux automation needs no desktop keyring. Invalid or empty environment values fail rather than falling back to a stored account. A 401 leaves stored Sessions untouched. `login` and `logout` return `ENV_TOKEN_ACTIVE` until the variable is unset; unsetting a variable does not revoke the token. Token creation and revocation are available in the app's Personal tokens page. Do not read environment secrets into tool output, copy them into prompts, or put them in command arguments.
+Token mode bypasses saved login credentials and never writes the PAT to disk. Invalid or empty environment values fail rather than falling back to a stored account. A 401 leaves stored Sessions untouched. `login` and `logout` return `ENV_TOKEN_ACTIVE` until the variable is unset; unsetting a variable does not revoke the token. Token creation and revocation are available in the app's Personal tokens page. Do not read environment secrets into tool output, copy them into prompts, or put them in command arguments.
 
 ## Discover and pull
 
@@ -135,7 +135,7 @@ Successful operations return JSON on stdout, usually under `data`. Help/version 
 | --- | --- |
 | `INVALID_TOKEN`, `ENV_TOKEN_ACTIVE` | Have the user correct `LOGCOVE_TOKEN` or explicitly choose Session mode; do not print or silently remove the variable |
 | `UNAUTHENTICATED` | If `LOGCOVE_TOKEN` is set, fix or replace it through the secret store; do not fall back. Otherwise use browser login. Preserve the selected account and API origin |
-| Credential-store errors | Report the OS-store requirement; Linux needs an unlocked Secret Service. Do not fall back to plaintext storage |
+| Credential-store errors | Follow the reported storage error. File-based builds use `~/.logcove/auth.json`; check permissions and file integrity without reading tokens into tool output or chat. CLI 0.3.2 and earlier use the OS store and may require unlocking it. After upgrading from OS-store to file-based login, run `logcove login` once; never copy credentials manually |
 | `ACCESS_DENIED`, `NOT_FOUND` | Check the selected account and resource; do not restart login automatically |
 | `NETWORK_ERROR`, `SERVER_ERROR`, `RATE_LIMITED` | Report the failure and request ID if present; retry reads only when appropriate, without an unbounded loop |
 | `OBJECT_CHANGED`, `DOWNLOAD_FAILED`, `DOWNLOAD_DENIED` | Do not analyze the incomplete pull; a new pull starts fresh, and `--concurrency 1` may help diagnose connection pressure |

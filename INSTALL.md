@@ -98,8 +98,10 @@ their secret-store configuration; do not print it, unset it, or fall back to log
 If no PAT is set and the CLI reports `UNAUTHENTICATED`, use `logcove login` and let
 the user approve in their own browser. `logcove login --no-browser` supplies a
 manual link. Keep that process running while waiting. Never ask the user to paste
-passwords or tokens into chat. Linux browser login needs a running, unlocked
-Secret Service; PAT mode bypasses the OS credential store.
+passwords or tokens into chat. The published v0.3.2 Linux browser login needs a
+running, unlocked Secret Service; PAT mode bypasses the OS credential store.
+The pending file-storage update requires one new browser login after upgrading
+and then saves Sessions in `~/.logcove/auth.json`; never read that file into chat.
 
 After successful authentication, `logcove whoami` and `logcove projects list`
 verify the account and access. An empty Project list is a valid result. Installation

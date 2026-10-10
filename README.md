@@ -55,9 +55,11 @@ logcove --version
 
 Add `%LOCALAPPDATA%\Logcove\bin` to your user Path in Windows Environment Variables to use it in future terminals.
 
-Linux login requires a running, unlocked Secret Service; see [credential storage](docs/cli.md#credential-persistence). Packages are currently unsigned; see the [platform notes](docs/releases.md#version-and-targets) for compatibility details.
+The published v0.3.2 Linux browser login requires a running, unlocked Secret Service; see [credential storage](docs/cli.md#credential-persistence). Packages are currently unsigned; see the [platform notes](docs/releases.md#version-and-targets) for compatibility details.
 
 For analysis, you also need Codex or Claude Code and a local [DuckDB](https://duckdb.org/docs/installation/) CLI or Python environment. DuckDB is installed separately from Logcove.
+
+The next release switches browser-login persistence to a private local file, removing the desktop keyring requirement. Existing users will log in once after upgrading; see [credential persistence](docs/cli.md#credential-persistence).
 
 ## Quick start
 
@@ -71,7 +73,7 @@ logcove whoami
 logcove projects list
 ```
 
-`login` opens your browser. Sign in and approve the CLI request; your session is saved in your OS credential store. For a link you can open manually, use `logcove login --no-browser`.
+`login` opens your browser. Sign in and approve the CLI request; the published v0.3.2 saves your session in your OS credential store. For a link you can open manually, use `logcove login --no-browser`.
 
 Each Project in the list is a data source you can explore.
 

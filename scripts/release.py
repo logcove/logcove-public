@@ -87,7 +87,7 @@ def package_cli(value, target, output):
         for document in (
             "cli.md", "skills.md", "releases.md", "validation.md",
             "skill-validation.md", "implementation-plan.md", "development.md",
-            "package-managers.md",
+            "package-managers.md", "file-credentials.md",
         ):
             shutil.copy2(ROOT / "docs" / document, staging / "docs" / document)
         (staging / "docs/release-notes").mkdir()
@@ -101,8 +101,9 @@ def package_cli(value, target, output):
             "Install the bundled Skill with logcove skills install --agent codex\n"
             "or logcove skills install --agent claude.\n"
             "See README.md for installation and quick start; docs/ has detailed guides.\n"
-            "DuckDB is installed separately. Linux login requires an unlocked\n"
-            "Secret Service. These archives are not code-signed or notarized.\n",
+            "DuckDB is installed separately. Login saves a private Session file at\n"
+            "~/.logcove/auth.json; no desktop keyring is needed. These archives\n"
+            "are not code-signed or notarized.\n",
             encoding="utf-8",
         )
         archive_tree(staging, archive)

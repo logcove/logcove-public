@@ -1,6 +1,10 @@
 mod support;
 
-use logcove::{client::Api, credentials::CredentialStore, error::Result};
+use logcove::{
+    client::Api,
+    credentials::{CredentialStore, FileCredentials},
+    error::Result,
+};
 use serde_json::json;
 use std::process::Command;
 use support::{Directory, MemoryStore, Server, Step};
@@ -44,6 +48,28 @@ fn token_operates_without_a_credential_store_and_ignores_session_renewal() {
             .unwrap();
     assert_eq!(api.whoami().unwrap().id, "owner");
     assert!(api.projects().unwrap().is_empty());
+    server.finish();
+}
+
+#[test]
+fn environment_token_ignores_even_a_broken_session_file() {
+    let server = Server::start(vec![
+        Step::json("GET", "/api/v1/me", Some(PAT), 200, json!({"data":user()}))
+            .header("set-auth-token", SESSION),
+        Step::json("GET", "/api/v1/me", Some(PAT), 401, json!({})),
+    ]);
+    let root = Directory::default();
+    let path = root.write("auth.json", "broken-session-file");
+    let store = FileCredentials::in_directory(root.0.clone(), server.origin.as_str()).unwrap();
+    let mut api =
+        Api::with_environment_token(server.origin.clone(), store, Some(PAT.into())).unwrap();
+    api.whoami().unwrap();
+    assert_eq!(api.whoami().err().unwrap().code, "UNAUTHENTICATED");
+    assert_eq!(
+        std::fs::read_to_string(path).unwrap(),
+        "broken-session-file"
+    );
+    assert_eq!(std::fs::read_dir(&root.0).unwrap().count(), 1);
     server.finish();
 }
 

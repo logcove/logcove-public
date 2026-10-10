@@ -345,7 +345,7 @@ impl<S: CredentialStore> Api<S> {
             }
         }
         let token = self.token.take().unwrap();
-        self.store.delete_if_matches(&token).map_err(|_| Error::new("CREDENTIAL_DELETE_FAILED", "The server session is no longer active, but local credential removal failed. Unlock the store and run logout again."))
+        self.store.delete_if_matches(&token).map_err(|_| Error::new("CREDENTIAL_DELETE_FAILED", "The server session is no longer active, but local credential removal failed. Check permissions for ~/.logcove and run logout again."))
     }
 }
 

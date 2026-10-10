@@ -350,7 +350,7 @@ impl<S: CredentialStore> Api<S> {
             let mut links = self.download_links(project, &keys)?;
             let batch = &missing[offset..offset + keys.len()];
             let local_api = config::is_loopback(&self.origin);
-            // Keep API/keyring operations on this thread; workers only fetch storage bytes.
+            // Keep API/credential operations on this thread; workers only fetch storage bytes.
             thread::scope(|scope| -> Result<()> {
                 let (sender, receiver) = mpsc::channel();
                 let mut pending: VecDeque<_> = (0..batch.len()).map(|i| (i, false)).collect();

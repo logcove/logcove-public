@@ -128,9 +128,9 @@ impl<S: CredentialStore> Api<S> {
                     return Err(Error::new(
                         "CREDENTIAL_SAVE_FAILED",
                         if revoked {
-                            "Could not save the CLI session. The new server session was revoked. Unlock your system credential store and log in again."
+                            "Could not save the CLI session. The new server session was revoked. Check permissions for ~/.logcove and log in again."
                         } else {
-                            "Could not save the CLI session or confirm its revocation. No persistent login was completed. Unlock your system credential store before retrying."
+                            "Could not save the CLI session or confirm its revocation. No persistent login was completed. Check permissions for ~/.logcove before retrying."
                         },
                     ));
                 }

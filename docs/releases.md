@@ -2,6 +2,13 @@
 
 ## Status and scope
 
+### Unreleased: file credentials
+
+The source switches browser-login persistence to `~/.logcove/auth.json` and
+removes the OS keyring dependency. Existing users log in once after upgrading.
+The published v0.3.2 artifacts are unchanged. See [design and migration](file-credentials.md)
+and [local validation](validation.md).
+
 ### v0.3.2 (2026-10-09)
 
 This patch adds one complete file-list refresh when compaction invalidates a
@@ -106,7 +113,7 @@ CLI and Skill use the version in `cli/Cargo.toml`. A release tag must be exactly
 | Linux ARM64 | `aarch64-unknown-linux-gnu` | `ubuntu-24.04-arm` | `.tar.gz` |
 | Windows x64 | `x86_64-pc-windows-msvc` | `windows-2022` | `.zip` |
 
-Each job runs on its target architecture and uses Rust 1.90.0 with `--locked`. The Linux packages target GNU/glibc environments, not Alpine/musl. Ubuntu 22.04 x64 and Ubuntu 24.04 ARM64 are the initial build/test baselines; compatibility with older systems needs separate verification. Linux login additionally requires a running, unlocked Secret Service. macOS/Windows runner checks do not establish support for every desktop OS version or real browser/credential-store behavior. The native credential test remains explicitly ignored unless run on a configured desktop.
+Each job runs on its target architecture and uses Rust 1.90.0 with `--locked`. The Linux packages target GNU/glibc environments, not Alpine/musl. Ubuntu 22.04 x64 and Ubuntu 24.04 ARM64 are the initial build/test baselines; compatibility with older systems needs separate verification. Published v0.3.2 Linux browser login additionally requires an unlocked Secret Service; the current source removes that dependency. macOS/Windows runner checks do not establish support for every desktop OS version or real browser/credential-store behavior. The current source runs isolated file-credential tests in normal CI; earlier native OS-store acceptance remains historical.
 
 Runner labels are from [GitHub-hosted runner documentation](https://docs.github.com/en/actions/reference/runners/github-hosted-runners). The repository must have Actions enabled and access to these runners, including ARM64 Linux.
 

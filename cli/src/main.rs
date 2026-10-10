@@ -4,7 +4,7 @@ use logcove::{
     charts::ChartCommand,
     client::Api,
     config,
-    credentials::OsCredentials,
+    credentials::FileCredentials,
     error::Result,
     management::{KeyCommand, ProjectCommand},
     skills::{self, SkillCommand},
@@ -20,13 +20,13 @@ use std::{
     name = "logcove",
     version,
     about = "Access Logcove from your local analysis workflow",
-    after_help = "For CI and remote agents, set LOGCOVE_TOKEN to a personal access token. It takes precedence over browser login and does not use the system credential store."
+    after_help = "For CI and remote agents, set LOGCOVE_TOKEN to a personal access token. It takes precedence over browser login and does not read or write the local session file."
 )]
 struct Cli {
     /// API origin; overrides the environment and saved configuration
     #[arg(long, env = "LOGCOVE_API_URL", global = true)]
     api_url: Option<String>,
-    /// Directory for non-secret configuration (credentials remain in the OS store)
+    /// Directory for non-secret configuration (Sessions are stored in ~/.logcove/auth.json)
     #[arg(long, env = "LOGCOVE_CONFIG_DIR", global = true)]
     config_dir: Option<PathBuf>,
     #[command(subcommand)]
@@ -143,7 +143,7 @@ fn run(cli: Cli) -> Result<Value> {
     if token.is_some() && matches!(cli.command, Command::Login { .. } | Command::Logout) {
         return Err(logcove::error::Error::new("ENV_TOKEN_ACTIVE", "LOGCOVE_TOKEN is active. Unset it before browser login or session logout. Revoke tokens from Personal tokens in the Logcove app."));
     }
-    let credentials = OsCredentials::new(&origin.origin().ascii_serialization())?;
+    let credentials = FileCredentials::new(&origin.origin().ascii_serialization())?;
     let mut api = Api::with_environment_token(origin, credentials, token)?;
     match cli.command {
         Command::Login { no_browser } => {
